@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Gustav's Shooter – Training</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game"></div>
+
+<!-- HUD, laid out after the sketch in sketches/controls.png -->
+<div id="hud" hidden>
+  <div id="timer" class="sketch-box">3:00</div>
+  <button id="exitBtn" class="sketch-box">EXIT</button>
+  <div id="score" class="sketch-box">0</div>
+  <div id="crosshair">+</div>
+  <div id="hitmarker">×</div>
+  <div id="scope"></div>
+  <div id="gunWrap"><canvas id="gunCanvas" width="420" height="220"></canvas><div id="flash"></div></div>
+  <div id="hearts"></div>
+  <div id="ammo" class="sketch-box">12 / 12</div>
+  <div id="weaponBar"></div>
+  <div id="popup"></div>
+
+  <div id="touch">
+    <div id="stickBase"><div id="stickKnob"></div></div>
+    <button class="tbtn" id="tFire">FIRE</button>
+    <button class="tbtn small" id="tReload">R</button>
+    <button class="tbtn small" id="tJump">JUMP</button>
+    <button class="tbtn small" id="tZoom">ZOOM</button>
+    <button class="tbtn small" id="tSwap">GUN</button>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="paper">
+    <h1>Gustav's Shooter</h1>
+    <h2 id="menuTitle">Training range</h2>
+    <p id="menuText">Shoot as many targets as you can in 3 minutes.<br>Bullseye = 10 points.</p>
+    <div id="menuButtons">
+      <button id="startBtn" class="big">START</button>
+      <button id="resumeBtn" class="big" hidden>RESUME</button>
+    </div>
+    <button id="styleBtn" class="toggle">Gun style: 3D</button>
+    <p class="help desktop-only">WASD move · Mouse aim · Click shoot · Right-click zoom · R reload · 1–5 / wheel change gun · Space jump · Shift run · V gun style · Esc/P menu</p>
+    <p class="help touch-only">Left thumb: move · Right thumb: aim · Buttons: fire, reload, zoom, gun</p>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/sketch.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/viewmodel.js"></script>
+<script src="js/world.js"></script>
+<script src="js/input.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
