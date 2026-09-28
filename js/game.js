@@ -24,7 +24,8 @@
   let mapId = 'range';
   try { if (localStorage.getItem('map') in maps) mapId = localStorage.getItem('map'); } catch (e) {}
   let world = maps[mapId];
-  const horde = GS.Monsters.create(maps.monsters, { onPlayerHit: playerHit });
+  // Each monster is ~30-60 draw calls, so phones get fewer at once
+  const horde = GS.Monsters.create(maps.monsters, { onPlayerHit: playerHit, cap: I.isTouch ? 16 : Infinity });
   const vm = GS.Viewmodel.create();
   renderer.autoClear = false;
 

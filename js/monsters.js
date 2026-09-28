@@ -677,7 +677,7 @@ GS.Monsters = (function () {
       if ((navT -= dt) <= 0) { nav.build(target.x, target.z); navT = 0.3; }
       let alive = 0;
       for (const m of list) if (m.dead < 0) alive++;
-      if ((spawnT -= dt) <= 0 && alive < maxAlive(elapsed)) { spawn(elapsed); spawnT = spawnEvery(elapsed); }
+      if ((spawnT -= dt) <= 0 && alive < Math.min(maxAlive(elapsed), hooks.cap || Infinity)) { spawn(elapsed); spawnT = spawnEvery(elapsed); }
       for (let i = list.length - 1; i >= 0; i--) {
         const m = list[i];
         if (m.dead >= 0) {
