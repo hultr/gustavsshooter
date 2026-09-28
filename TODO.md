@@ -15,10 +15,8 @@
 - [ ] Healing rate and poison strength: `updateHealth`, `POISON`, `POISON_TICK` in `js/game.js`.
 - [ ] Weapon damage, RPG radius, minigun spin-up/slowdown in `js/weapons.js`.
 
-## Nice to have
-- [ ] A bigger photo of `sketches/monsters.png` would help match the monsters more closely.
-
 ## Done
+- [x] Monsters reshaped from the high-res photo `sketches/monstershires.jpg`.
 - [x] Played with mouse and keyboard: works.
 - [x] Sketch numbers confirmed: the red ones are 5 and 7. Gob is its own family.
 - [x] Unnamed monsters got Swedish names: Trassel, Hopparen, Löparen.

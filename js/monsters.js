@@ -3,7 +3,7 @@
 // and a way of moving.
 //   1  blade stalkers – Fob, Bob, Olt (a hand on one arm, a blade on the other)
 //   2  root things    – Frot (walking tree), Trassel (bundle of stalks), Dhi (flies)
-//   3  small crawlers – Bek (worm), Durk (on wheels), Dir (hopping head)
+//   3  small crawlers – Bek (worm), Durk (grin on a round base), Dir (hopping head)
 //   5  Hopparen       – long grasshopper legs, jumps at you
 //   7  runners        – Löparen (spiky hair, long arms), Bok (hairy with a big claw)
 // From sketches/monstersandweapons2.png:
@@ -25,12 +25,11 @@ GS.Monsters = (function () {
   const ball = (r, d = 1) => once(`s${r},${d}`, () => new THREE.IcosahedronGeometry(r, d));
   const box = (w, h, d) => once(`x${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d));
   const spike = (r, h, s = 4) => once(`k${r},${h},${s}`, () => new THREE.ConeGeometry(r, h, s).translate(0, h / 2, 0));
-  const wheel = r => once('w' + r, () => new THREE.CylinderGeometry(r, r, 0.12, 8).rotateZ(Math.PI / 2));
-  const smile = r => once('smile' + r, () => new THREE.TorusGeometry(r, 0.04, 4, 8, Math.PI).rotateZ(Math.PI));
+  const arc = r => once('arc' + r, () => new THREE.TorusGeometry(r, 0.018, 3, 10, Math.PI).rotateZ(Math.PI)); // ink smile
   const edges = g => once('e' + g.uuid, () => new THREE.EdgesGeometry(g, 25));
 
   const C = {
-    bone: 0xe6dfcc, blade: 0x3a3a40, dark: 0x3b302a, mouth: 0x2a1212, eye: 0xfff06a,
+    bone: 0xe6dfcc, blade: 0x2a2a30, dark: 0x3b302a, mouth: 0x2a1212, ink: 0x1c1c1c, white: 0xf7f4ea,
     bark: 0x94805f, moss: 0x9fae80, gob: 0xcfc9bd, tooth: 0xfffbe8, slime: 0xc4d68f, pink: 0xe6bca8, grey: 0xb4a9c8, rust: 0xcf9f72,
   };
   const PI = Math.PI;
@@ -64,9 +63,20 @@ GS.Monsters = (function () {
   const swing = (R, o, amp, ph = 0, axis = 'x') => R.swing.push({ o, axis, amp, ph, base: o.rotation[axis] });
   // strikes when attacking (and swings a little while walking)
   const arm = (R, o, ph = 0, reach = 1) => R.arms.push({ o, ph, reach, base: o.rotation.x });
-  function eyes(R, parent, y, z, dx, r = 0.05) {
-    part(R, parent, ball(r, 0), C.eye, { p: [-dx, y, z], glow: true, head: true });
-    part(R, parent, ball(r, 0), C.eye, { p: [dx, y, z], glow: true, head: true });
+  // Eyes as Gustav draws them: a white almond with a black pupil (unlit, so they read at dusk).
+  // dark: a solid black eye, like Fob's.
+  function eye(R, parent, x, y, z, r = 0.05, dark = false) {
+    const e = part(R, parent, ball(r, 1), dark ? C.ink : C.white, { p: [x, y, z], s: [1.4, 0.8, 0.6], glow: true, head: true });
+    if (!dark) part(R, e, ball(r * 0.5, 0), C.ink, { p: [0, 0, r * 0.7], glow: true, head: true });
+    return e;
+  }
+  function eyes(R, parent, y, z, dx, r = 0.05, dark = false) {
+    eye(R, parent, -dx, y, z, r, dark);
+    eye(R, parent, dx, y, z, r, dark);
+  }
+  // Rib lines drawn across a chest: small ink smiles
+  function ribs(R, parent, y0, z, w, n = 3, step = 0.13) {
+    for (let k = 0; k < n; k++) part(R, parent, arc(w * (1 - k * 0.08)), C.ink, { p: [0, y0 - k * step, z], glow: true });
   }
   function claws(R, parent, n, len, color, spread = 0.35) {
     for (let i = 0; i < n; i++) {
@@ -74,8 +84,16 @@ GS.Monsters = (function () {
       part(R, parent, spike(0.03, len), color, { r: [PI - 0.3, 0, a] });
     }
   }
+  // Two horns on top of a head (the red family has them)
+  function horns(R, parent, y, dx, len = 0.3) {
+    for (const s of [-1, 1]) part(R, parent, spike(0.06, len), C.ink, { p: [s * dx, y, 0], r: [0, 0, -s * 0.35], head: true });
+  }
 
   // ---------- Family 1: blade stalkers ----------
+  // Front view (Fob): long head with black eyes and an open mouth, a raised hand with an
+  // eye in the palm, the other forearm is a black blade, and the body flares into a skirt
+  // of pointed legs. Back view (Bob): slim, black fist. Dead (Olt): antler strands where
+  // the head was, a black streak down the chest, big claw hand.
   function stalker(o) {
     return function () {
       const R = rig(), b = R.body, col = C.bone;
@@ -83,56 +101,67 @@ GS.Monsters = (function () {
       for (let i = 0; i < o.legs; i++) {
         const a = i / o.legs * PI * 2;
         const j = joint(b, [Math.cos(a) * o.hipR, hip, Math.sin(a) * o.hipR * 0.8], [0, 0, Math.cos(a) * 0.12]);
-        part(R, j, limb(o.legR, o.legR * 0.6, o.legLen + 0.05), col);
+        part(R, j, limb(o.legR, o.legR * 0.8, o.legLen - 0.2), col);
+        part(R, j, spike(o.legR * 0.8, 0.28), col, { p: [0, -(o.legLen - 0.2), 0], r: [PI, 0, 0] }); // pointed foot
         swing(R, j, 0.4, (i % 2) * PI + i * 0.3);
       }
       part(R, b, trunk(o.chest, o.waist, o.torso), col, { p: [0, hip - 0.05, 0] });
-      for (let k = 0; k < 3; k++) {
-        part(R, b, box(o.chest * 1.2, 0.03, 0.03), C.dark, { p: [0, hip + o.torso * (0.45 + k * 0.15), (o.chest + o.waist) * 0.47] });
-      }
+      ribs(R, b, hip + o.torso * 0.8, (o.chest + o.waist) * 0.5, o.chest * 0.5);
       const sh = hip + o.torso;
-      part(R, b, trunk(0.08, 0.1, 0.25), col, { p: [0, sh - 0.05, 0] });
       const head = joint(b, [0, sh + 0.2, 0]);
-      if (o.head === 'long') {          // Fob: long head, gaping mouth
-        part(R, head, ball(0.28), col, { p: [0, 0.4, 0], s: [0.9, 1.5, 0.9], head: true });
-        part(R, head, box(0.16, 0.34, 0.06), C.mouth, { p: [0, 0.3, 0.24], glow: true, head: true });
-        eyes(R, head, 0.6, 0.2, 0.09);
-      } else if (o.head === 'egg') {    // Bob: bald egg head
-        part(R, head, ball(0.24), col, { p: [0, 0.32, 0], s: [0.85, 1.3, 1], head: true });
-        eyes(R, head, 0.36, 0.2, 0.08);
-      } else {                          // Olt: spiky head
-        part(R, head, ball(0.26), col, { p: [0, 0.28, 0], head: true });
-        for (let i = 0; i < 7; i++) {
-          const a = i / 7 * PI * 2;
-          part(R, head, spike(0.07, 0.35), C.dark, { p: [0, 0.4, 0], r: [Math.sin(a) * 0.9, 0, Math.cos(a) * 0.9], head: true });
+      if (o.head === 'long') {          // Fob
+        part(R, b, trunk(0.07, 0.09, 0.3), col, { p: [0, sh - 0.05, 0] });
+        part(R, head, ball(0.26), col, { p: [0, 0.45, 0], s: [0.85, 1.7, 0.85], head: true });
+        eyes(R, head, 0.72, 0.2, 0.08, 0.06, true);
+        part(R, head, box(0.13, 0.3, 0.06), C.mouth, { p: [0, 0.38, 0.2], glow: true, head: true });
+        for (const x of [-0.035, 0.035]) part(R, head, box(0.02, 0.07, 0.02), C.white, { p: [x, 0.5, 0.23], glow: true, head: true });
+      } else if (o.head === 'egg') {    // Bob, seen from behind: narrow head, one eye peeking
+        part(R, b, trunk(0.07, 0.09, 0.3), col, { p: [0, sh - 0.05, 0] });
+        part(R, head, ball(0.2), col, { p: [0, 0.4, 0], s: [0.8, 1.8, 0.9], head: true });
+        eye(R, head, 0.05, 0.55, 0.17, 0.045);
+      } else {                          // Olt, dead: antler strands instead of a head
+        part(R, head, ball(0.12, 0), C.ink, { p: [0, 0.02, 0], head: true });
+        for (let i = 0; i < 6; i++) {
+          const a = (i - 2.5) * 0.35;
+          const j = joint(head, [0, 0.05, 0], [0, i % 2 ? 0.4 : -0.4, a]);
+          part(R, j, spike(0.03, 0.45 + (i % 3) * 0.12), C.ink, { head: true });
+          swing(R, j, 0.15, i, 'z');
         }
-        eyes(R, head, 0.3, 0.22, 0.09);
+        part(R, b, box(0.14, o.torso * 0.8, 0.04), C.ink, { p: [0, hip + o.torso * 0.55, (o.chest + o.waist) * 0.48], glow: true });
       }
-      // hand/claw arm
+      // hand arm
       const la = joint(b, [o.chest + 0.08, sh - 0.05, 0], [0, 0, 0.35]);
-      part(R, la, limb(0.07, 0.055, o.arm), col);
+      part(R, la, limb(0.065, 0.055, o.arm), col);
       const lf = joint(la, [0, -o.arm, 0], [-0.5, 0, 0]);
       part(R, lf, limb(0.055, 0.045, o.arm * 0.8), col);
       const hand = joint(lf, [0, -o.arm * 0.8, 0]);
-      if (o.hand === 'hand') {
-        part(R, hand, ball(0.1, 0), col, { s: [1, 1.2, 0.5] });
+      if (o.hand === 'eye') {           // open hand with an eye in the palm
+        part(R, hand, ball(0.1, 0), col, { s: [1.1, 1.3, 0.5] });
+        eye(R, hand, 0, -0.02, 0.06, 0.035);
         claws(R, hand, 5, 0.22, col, 0.28);
-      } else {
-        claws(R, hand, 3, 0.3, C.dark, 0.4);
+      } else if (o.hand === 'fist') {   // black fist
+        part(R, hand, ball(0.11, 0), C.ink, { s: [1, 1.2, 0.9] });
+        claws(R, hand, 4, 0.14, C.ink, 0.3);
+      } else {                          // big black claw
+        part(R, hand, ball(0.1, 0), C.ink);
+        claws(R, hand, 5, 0.34, C.ink, 0.32);
       }
       arm(R, la, 0);
-      // blade arm
+      // blade arm: the forearm itself is a curved black blade
       const ra = joint(b, [-o.chest - 0.08, sh - 0.05, 0], [0, 0, -0.35]);
-      part(R, ra, limb(0.07, 0.055, o.arm), col);
-      const rf = joint(ra, [0, -o.arm, 0], [-0.7, 0, 0]);
-      part(R, rf, limb(0.055, 0.05, o.arm * 0.5), col);
-      part(R, rf, spike(0.16, o.blade), C.blade, { p: [0, -o.arm * 0.45, 0], r: [PI, 0, 0], s: [1, 1, 0.25] });
+      part(R, ra, limb(0.065, 0.055, o.arm), col);
+      const rf = joint(ra, [0, -o.arm, 0], [-0.6, 0, 0]);
+      part(R, rf, spike(0.13, o.blade * 0.6), C.blade, { r: [PI, 0, 0], s: [1, 1, 0.3] });
+      const tip = joint(rf, [0, -o.blade * 0.55, 0], [-0.5, 0, 0]);
+      part(R, tip, spike(0.09, o.blade * 0.5), C.blade, { r: [PI, 0, 0], s: [1, 1, 0.3] });
       arm(R, ra, PI, 1.1);
       return R;
     };
   }
 
   // ---------- Family 2: root things ----------
+  // Front (Frot): a tall trunk with eyes down it, curly tendrils on top, splitting into
+  // root legs at the bottom with rib lines where it splits.
   function frot() {
     const R = rig(), b = R.body;
     for (let i = 0; i < 6; i++) {
@@ -141,31 +170,37 @@ GS.Monsters = (function () {
       const k = joint(j, [0, 0, 0], [0, 0, 0.7]);
       part(R, k, limb(0.13, 0.09, 0.9), C.bark);
       const knee = joint(k, [0, -0.9, 0], [0, 0, -0.9]);
-      part(R, knee, limb(0.09, 0.04, 0.85), C.bark);
+      part(R, knee, limb(0.09, 0.05, 0.75), C.bark);
+      part(R, knee, spike(0.05, 0.2), C.bark, { p: [0, -0.75, 0], r: [PI, 0, 0] });
       swing(R, k, 0.3, i * 1.1, 'z');
     }
-    part(R, b, trunk(0.3, 0.5, 2.6), C.bark, { p: [0, 1.2, 0] });
-    [1.8, 2.5, 3.2].forEach(y => part(R, b, box(0.28, 0.07, 0.1), C.dark, { p: [0, y, 0.5 - (y - 1.2) * 0.08] }));
-    const head = joint(b, [0, 3.85, 0]);
-    part(R, head, ball(0.34, 0), C.dark, { head: true });
-    eyes(R, head, 0.05, 0.3, 0.12, 0.07);
+    part(R, b, trunk(0.3, 0.5, 2.7), C.bark, { p: [0, 1.2, 0] });
+    ribs(R, b, 1.75, 0.49, 0.2);
+    [2.3, 3.0, 3.6].forEach((y, i) => eye(R, b, 0, y, 0.47 - (y - 1.2) * 0.075, 0.09, false));
+    const head = joint(b, [0, 3.9, 0]);
+    part(R, head, ball(0.3, 0), C.bark, { s: [1, 0.6, 1], head: true });
     for (let i = 0; i < 7; i++) {
-      const h = joint(head, [0, 0.15, 0], [0, i / 7 * PI * 2, 0.9 + (i % 2) * 0.4]);
-      part(R, h, spike(0.04, 0.9), C.dark);
+      const h = joint(head, [0, 0.1, 0], [0, i / 7 * PI * 2, 0.7 + (i % 2) * 0.5]);
+      part(R, h, spike(0.035, 0.6), C.ink);
+      const curl = joint(h, [0, 0.6, 0], [0, 0, -1.1]);   // curls over at the end
+      part(R, curl, spike(0.025, 0.35), C.ink);
       swing(R, h, 0.35, i, 'z');
     }
     return R;
   }
 
+  // Back (Trassel): a bundle of stalks splitting into long forked legs, whiskers on top
   function tangle() {
     const R = rig(), b = R.body;
     for (let i = 0; i < 4; i++) {
       const a = i / 4 * PI * 2 + 0.4;
-      const j = joint(b, [0, 1.55, 0], [0, a, 0.35]);
-      part(R, j, limb(0.06, 0.03, 1.65), C.dark);
+      const j = joint(b, [0, 1.55, 0], [0, a, 0.3]);
+      part(R, j, limb(0.07, 0.04, 1.35), C.bark);
+      for (const f of [-0.35, 0.35]) part(R, j, spike(0.03, 0.35), C.bark, { p: [0, -1.33, 0], r: [PI, 0, f] }); // forked foot
       swing(R, j, 0.45, (i % 2) * PI);
     }
-    part(R, b, ball(0.3, 0), C.dark, { p: [0, 1.6, 0] });
+    part(R, b, ball(0.3, 0), C.bark, { p: [0, 1.6, 0] });
+    ribs(R, b, 1.6, 0.28, 0.15, 2, 0.1);
     for (let i = 0; i < 5; i++) {
       const a = i / 5 * PI * 2;
       part(R, b, trunk(0.04, 0.07, 0.8 + (i % 3) * 0.2), C.bark, { p: [Math.cos(a) * 0.12, 1.7, Math.sin(a) * 0.12], r: [Math.sin(a) * 0.2, 0, Math.cos(a) * 0.2] });
@@ -174,107 +209,126 @@ GS.Monsters = (function () {
     part(R, head, ball(0.2), C.bark, { head: true });
     eyes(R, head, 0.04, 0.17, 0.07);
     for (const s of [-1, 1]) {
+      const w = joint(head, [s * 0.12, 0.1, 0], [0, 0, -s * 1.2]);  // whiskers curling out
+      part(R, w, spike(0.02, 0.5), C.ink);
+      swing(R, w, 0.3, s, 'z');
+    }
+    for (const s of [-1, 1]) {
       const w = joint(b, [s * 0.2, 2.2, 0.1], [0, 0, s * 0.5]);
-      part(R, w, limb(0.05, 0.02, 1.4), C.dark);
+      part(R, w, limb(0.05, 0.02, 1.4), C.bark);
       arm(R, w, s > 0 ? 0 : PI, 1.2);
     }
     return R;
   }
 
+  // Dead (Dhi): a flying head with long strands streaming out behind it, eyes shut
   function dhi() {
     const R = rig(), b = R.body;
-    part(R, b, ball(0.35), C.moss, { s: [0.8, 0.7, 2.2] });
-    [-0.35, 0, 0.35].forEach(z => part(R, b, box(0.58, 0.5, 0.05), C.dark, { p: [0, 0, z], s: z ? [0.88, 0.88, 1] : [0.97, 0.97, 1] }));
-    const head = joint(b, [0, 0.05, 0.8]);
-    part(R, head, ball(0.24), C.bone, { head: true });
-    part(R, head, box(0.2, 0.06, 0.05), C.mouth, { p: [0, -0.08, 0.22], glow: true, head: true });
-    eyes(R, head, 0.08, 0.2, 0.08);
-    part(R, b, spike(0.12, 0.7), C.moss, { p: [0, 0, -0.7], r: [-PI / 2, 0, 0] });
-    for (const s of [-1, 1]) {
-      const w = joint(b, [s * 0.2, 0.15, 0.05]);
-      part(R, w, box(1.2, 0.03, 0.55), C.moss, { p: [s * 0.6, 0, 0] });
-      swing(R, w, s * 0.7, 0, 'z');
+    const head = joint(b, [0, 0, 0.3]);
+    part(R, head, ball(0.32), C.moss, { s: [1, 0.9, 1.1], head: true });
+    for (const x of [-0.08, 0.08]) part(R, head, box(0.025, 0.1, 0.02), C.ink, { p: [x, 0.08, 0.33], glow: true, head: true }); // closed eyes "ll"
+    part(R, head, arc(0.12), C.ink, { p: [0, -0.08, 0.32], glow: true, head: true });
+    for (let i = 0; i < 6; i++) {
+      const a = (i - 2.5) * 0.35;
+      const j = joint(b, [Math.sin(a) * 0.18, Math.cos(a) * 0.18 - 0.05, 0.1], [PI / 2 + a * 0.4, 0, 0]); // strands trail behind (-z)
+      part(R, j, spike(0.05, 1.2 + (i % 2) * 0.4), C.ink, { r: [PI, 0, 0] });
+      swing(R, j, 0.25, i * 0.8, 'y');
     }
     return R;
   }
 
   // ---------- Family 3: small crawlers ----------
+  // Back (Bek): a worm neck rising from a coil, one eye, tail curling round with a claw
   function bek() {
     const R = rig(), b = R.body;
     const tail = joint(b, [0, 0, 0]);
     part(R, tail, ball(0.3), C.slime, { p: [0, 0.26, 0] });
-    part(R, tail, ball(0.24), C.slime, { p: [0, 0.22, -0.45] });
-    part(R, tail, ball(0.17), C.slime, { p: [0, 0.25, -0.8] });
-    part(R, tail, spike(0.1, 0.45), C.slime, { p: [0, 0.3, -0.95], r: [-0.6, 0, 0] });
+    part(R, tail, ball(0.24), C.slime, { p: [0.15, 0.22, -0.42] });
+    part(R, tail, ball(0.17), C.slime, { p: [0.4, 0.25, -0.6] });
+    const tip = joint(tail, [0.55, 0.35, -0.6], [0, 0, -0.6]);
+    part(R, tip, trunk(0.06, 0.1, 0.4), C.slime);
+    claws(R, joint(tip, [0, 0.5, 0], [PI, 0, 0]), 3, 0.15, C.ink);
     swing(R, tail, 0.35, 0, 'y');
     part(R, b, trunk(0.14, 0.22, 0.65), C.slime, { p: [0, 0.3, 0.2], r: [0.4, 0, 0] });
     const head = joint(b, [0, 0.95, 0.47]);
     part(R, head, ball(0.2), C.slime, { s: [1, 1.3, 1], head: true });
-    part(R, head, ball(0.08, 0), C.eye, { p: [0, 0.08, 0.17], glow: true, head: true });
+    eye(R, head, 0, 0.08, 0.17, 0.07);
     const a = joint(b, [0.2, 0.7, 0.4], [0, 0, 0.5]);
     part(R, a, limb(0.04, 0.03, 0.4), C.slime);
-    claws(R, joint(a, [0, -0.4, 0]), 3, 0.18, C.dark);
+    claws(R, joint(a, [0, -0.4, 0]), 3, 0.18, C.ink);
     arm(R, a, 0);
     return R;
   }
 
+  // Front (Durk): a tall worm on a round base, big grin full of teeth, ribs down the neck
   function durk() {
     const R = rig(), b = R.body;
-    for (const s of [-1, 1]) R.spin.push(part(R, b, wheel(0.25), C.dark, { p: [s * 0.42, 0.25, 0] }));
-    part(R, b, trunk(0.3, 0.42, 0.8), C.pink, { p: [0, 0.2, 0] });
-    [0.45, 0.65].forEach(y => part(R, b, box(0.5, 0.03, 0.03), C.dark, { p: [0, y, 0.39 - (y - 0.2) * 0.1] }));
+    part(R, b, trunk(0.5, 0.5, 0.12, 12), C.pink, { p: [0, 0, 0] });                 // round base
+    for (let i = 0; i < 3; i++) eye(R, b, (i - 1) * 0.22, 0.07, 0.46, 0.04, true);    // spots on the base
+    for (const s of [-1, 1]) {                                                         // little claws at the base
+      const c = joint(b, [s * 0.45, 0.15, 0.1], [0, 0, s * 0.9]);
+      claws(R, c, 3, 0.15, C.ink, 0.4);
+    }
+    part(R, b, trunk(0.3, 0.38, 0.9), C.pink, { p: [0, 0.1, 0] });
+    ribs(R, b, 0.65, 0.35, 0.18);
     const head = joint(b, [0, 1.3, 0]);
-    part(R, head, ball(0.4), C.pink, { head: true });
-    part(R, head, smile(0.2), C.mouth, { p: [0, -0.05, 0.37], glow: true, head: true });
-    eyes(R, head, 0.14, 0.34, 0.13, 0.06);
-    const a = joint(b, [0.35, 0.85, 0.1], [0, 0, 0.5]);
-    part(R, a, limb(0.05, 0.04, 0.5), C.pink);
-    claws(R, joint(a, [0, -0.5, 0]), 4, 0.14, C.pink);
+    part(R, head, ball(0.38), C.pink, { s: [1, 1.1, 1], head: true });
+    part(R, head, box(0.36, 0.14, 0.1), C.mouth, { p: [0, -0.06, 0.33], glow: true, head: true });
+    for (let i = 0; i < 5; i++) part(R, head, box(0.03, 0.04, 0.02), C.white, { p: [(i - 2) * 0.06, 0, 0.38], glow: true, head: true });
+    eyes(R, head, 0.16, 0.32, 0.12, 0.05, true);
+    const a = joint(b, [0.35, 0.8, 0.1], [0, 0, 0.5]);
+    part(R, a, limb(0.05, 0.04, 0.45), C.pink);
+    claws(R, joint(a, [0, -0.45, 0]), 3, 0.14, C.ink);
     arm(R, a, 0);
     return R;
   }
 
+  // Dead (Dir): just the head, with a black hair cap and dotted eyes
   function dir() {
     const R = rig(), b = R.body;
     for (let i = 0; i < 4; i++) {
       const a = i / 4 * PI * 2 + PI / 4;
       const j = joint(b, [Math.cos(a) * 0.15, 0.25, Math.sin(a) * 0.15], [0, -a, 0.4]);
-      part(R, j, limb(0.03, 0.02, 0.27), C.dark);
+      part(R, j, limb(0.03, 0.02, 0.27), C.ink);
       swing(R, j, 0.5, i * PI / 2, 'z');
     }
     const head = joint(b, [0, 0.45, 0]);
     part(R, head, ball(0.28), C.pink, { head: true });
-    for (let i = 0; i < 4; i++) part(R, head, spike(0.05, 0.3), C.dark, { p: [0, 0.2, -0.05], r: [-0.3, 0, (i - 1.5) * 0.4], head: true });
-    part(R, head, box(0.18, 0.05, 0.05), C.mouth, { p: [0, -0.08, 0.26], glow: true, head: true });
-    eyes(R, head, 0.07, 0.24, 0.09);
+    part(R, head, ball(0.29), C.ink, { p: [0, 0.08, -0.04], s: [1, 0.6, 1], head: true });  // hair cap
+    for (let i = 0; i < 4; i++) part(R, head, box(0.03, 0.06, 0.02), C.ink, { p: [(i - 1.5) * 0.08, -0.08, 0.26], glow: true, head: true });
+    eyes(R, head, 0.04, 0.24, 0.1, 0.04);
     return R;
   }
 
   // ---------- Family 5: Hopparen ----------
+  // Front: a hunched body with two horns and one big eye, one long arm reaching the ground
   function leaper() {
     const R = rig(), b = R.body;
     for (const s of [-1, 1]) {
-      const t = joint(b, [s * 0.32, 1.5, -0.2], [2.4, 0, 0]);
-      part(R, t, limb(0.08, 0.06, 0.9), C.grey);
-      const k = joint(t, [0, -0.9, 0], [-2.6, 0, 0]);
-      part(R, k, limb(0.06, 0.03, 2.2), C.grey);
-      swing(R, t, 0.25, s > 0 ? 0 : PI);
+      const t = joint(b, [s * 0.25, 0.9, 0]);
+      part(R, t, limb(0.1, 0.08, 0.5), C.grey);
+      const k = joint(t, [0, -0.5, 0], [0.4, 0, 0]);
+      part(R, k, limb(0.08, 0.06, 0.45), C.grey);
+      claws(R, joint(k, [0, -0.45, 0.05]), 3, 0.15, C.ink, 0.5);
+      swing(R, t, 0.5, s > 0 ? 0 : PI);
     }
-    part(R, b, ball(0.35), C.grey, { p: [0, 1.6, 0.05], r: [0.4, 0, 0], s: [0.9, 0.8, 1.5] });
-    const head = joint(b, [0, 1.95, 0.55]);
-    part(R, head, ball(0.22), C.grey, { head: true });
-    for (let i = 0; i < 5; i++) part(R, head, spike(0.05, 0.3), C.dark, { p: [0, 0.1, -0.05], r: [-0.6, 0, (i - 2) * 0.4], head: true });
-    eyes(R, head, 0.02, 0.19, 0.08);
+    const hump = joint(b, [0, 0.85, 0], [0.35, 0, 0]);
+    part(R, hump, trunk(0.42, 0.32, 0.9), C.grey);
+    const head = joint(hump, [0, 0.9, 0.05]);
+    part(R, head, ball(0.34), C.grey, { s: [1.2, 0.8, 1], head: true });
+    horns(R, head, 0.18, 0.25, 0.38);
+    eye(R, head, 0, -0.05, 0.3, 0.1);
     for (const s of [-1, 1]) {
-      const a = joint(b, [s * 0.28, 1.7, 0.45], [-0.3, 0, s * 0.2]);
-      part(R, a, limb(0.05, 0.04, 1.2), C.grey);
-      claws(R, joint(a, [0, -1.2, 0]), 3, 0.2, C.dark);
+      const a = joint(hump, [s * 0.42, 0.75, 0.1], [-0.4, 0, s * 0.25]);
+      part(R, a, limb(0.07, 0.05, s > 0 ? 1.3 : 0.7), C.grey);
+      claws(R, joint(a, [0, s > 0 ? -1.3 : -0.7, 0]), 4, 0.22, C.ink, 0.3);
       arm(R, a, s > 0 ? 0 : PI);
     }
     return R;
   }
 
-  // ---------- Family 7: runners ----------
+  // ---------- Family 7: Löparen and Bok ----------
+  // Dead drawing (Löparen): a thin twisted figure with a small horned head and long arms
   function runner() {
     const R = rig(), b = R.body;
     for (const s of [-1, 1]) {
@@ -286,39 +340,40 @@ GS.Monsters = (function () {
     }
     const chest = joint(b, [0, 0.95, 0], [0.35, 0, 0]);
     part(R, chest, trunk(0.22, 0.16, 0.7), C.rust);
+    ribs(R, chest, 0.5, 0.2, 0.12);
     const head = joint(chest, [0, 0.9, 0]);
-    part(R, head, ball(0.18), C.rust, { head: true });
-    for (let i = 0; i < 6; i++) part(R, head, spike(0.05, 0.32), C.dark, { p: [0, 0.08, -0.04], r: [-0.4 - (i % 2) * 0.4, 0, (i - 2.5) * 0.35], head: true });
-    eyes(R, head, 0.03, 0.15, 0.07);
+    part(R, head, ball(0.16), C.rust, { s: [1, 1.3, 1], head: true });
+    horns(R, head, 0.12, 0.09, 0.25);
+    eyes(R, head, 0.03, 0.14, 0.06, 0.035);
     for (const s of [-1, 1]) {
       const a = joint(chest, [s * 0.26, 0.65, 0], [-0.2, 0, s * 0.25]);
       part(R, a, limb(0.05, 0.04, 0.95), C.rust);
-      claws(R, joint(a, [0, -0.95, 0]), 3, 0.15, C.dark);
+      claws(R, joint(a, [0, -0.95, 0]), 4, 0.18, C.ink);
       arm(R, a, s > 0 ? PI : 0);
     }
     return R;
   }
 
+  // Back drawing (Bok): squat, two horns, a black patch on the neck, long clawed arms
   function bok() {
     const R = rig(), b = R.body;
     for (const s of [-1, 1]) {
       const l = joint(b, [s * 0.2, 0.42, 0]);
-      part(R, l, limb(0.08, 0.05, 0.42), C.rust);
+      part(R, l, limb(0.09, 0.06, 0.42), C.rust);
       swing(R, l, 0.7, s > 0 ? 0 : PI);
     }
-    part(R, b, ball(0.42), C.rust, { p: [0, 0.78, 0], s: [1, 1.1, 0.9], head: true });
-    for (let i = 0; i < 9; i++) {
-      const a = i / 9 * PI * 2;
-      part(R, b, spike(0.07, 0.3), C.dark, { p: [Math.sin(a) * 0.3, 0.95, Math.cos(a) * 0.25 - 0.05], r: [Math.cos(a) * 0.9 - 0.2, 0, -Math.sin(a) * 0.9] });
+    part(R, b, trunk(0.38, 0.32, 0.6), C.rust, { p: [0, 0.4, 0] });
+    const head = joint(b, [0, 1.05, 0]);
+    part(R, head, ball(0.3), C.rust, { s: [1.1, 0.8, 1], head: true });
+    part(R, head, ball(0.2, 0), C.ink, { p: [0, -0.1, -0.15], s: [1.4, 0.6, 1] });  // black patch on the neck
+    horns(R, head, 0.12, 0.22, 0.32);
+    eyes(R, head, 0.02, 0.25, 0.1, 0.045);
+    for (const s of [-1, 1]) {
+      const a = joint(b, [s * 0.4, 0.9, 0.05], [0, 0, s * 0.3]);
+      part(R, a, limb(0.07, 0.05, 0.75), C.rust);
+      claws(R, joint(a, [0, -0.75, 0]), 3, 0.25, C.ink, 0.45);
+      arm(R, a, s > 0 ? 0 : PI, s > 0 ? 1.2 : 0.8);
     }
-    eyes(R, b, 0.9, 0.36, 0.12, 0.06);
-    const big = joint(b, [0.42, 0.85, 0.1], [0, 0, 0.4]);
-    part(R, big, limb(0.07, 0.06, 0.55), C.rust);
-    claws(R, joint(big, [0, -0.55, 0]), 3, 0.35, C.dark, 0.45);
-    arm(R, big, 0, 1.2);
-    const small = joint(b, [-0.4, 0.8, 0.1], [0, 0, -0.4]);
-    part(R, small, limb(0.04, 0.03, 0.35), C.rust);
-    arm(R, small, PI, 0.6);
     return R;
   }
 
@@ -365,15 +420,15 @@ GS.Monsters = (function () {
   // from: seconds into the fight before it starts showing up.
   const SPECIES = [
     { id: 'bek', name: 'Bek', family: 3, build: bek, hp: 45, speed: 2.6, dmg: 1, r: 0.45, h: 1.1, move: 'walk', from: 0, weight: 3, score: 10 },
-    { id: 'bob', name: 'Bob', family: 1, build: stalker({ legs: 5, legLen: 1.45, legR: 0.05, hipR: 0.2, torso: 0.9, chest: 0.25, waist: 0.3, head: 'egg', hand: 'claw', arm: 0.7, blade: 1.1 }),
+    { id: 'bob', name: 'Bob', family: 1, build: stalker({ legs: 5, legLen: 1.45, legR: 0.05, hipR: 0.2, torso: 0.9, chest: 0.25, waist: 0.3, head: 'egg', hand: 'fist', arm: 0.7, blade: 1.2 }),
       hp: 90, speed: 3.0, dmg: 2, r: 0.6, h: 3.0, move: 'walk', from: 0, weight: 3, score: 20 },
     { id: 'dir', name: 'Dir', family: 3, build: dir, hp: 25, speed: 3.6, dmg: 1, r: 0.3, h: 0.8, move: 'hop', jump: 4, from: 15, weight: 2, score: 10 },
     { id: 'durk', name: 'Durk', family: 3, build: durk, hp: 60, speed: 3.0, dmg: 1, r: 0.5, h: 1.7, move: 'walk', from: 25, weight: 2, score: 15 },
     { id: 'gob', name: 'Gob', family: 'Gob', build: gob, hp: 80, speed: 3.4, dmg: 2, r: 0.5, h: 2.6, move: 'walk', stride: 0.7, from: 30, weight: 2, score: 20 },
-    { id: 'fob', name: 'Fob', family: 1, build: stalker({ legs: 6, legLen: 1.5, legR: 0.09, hipR: 0.3, torso: 1.0, chest: 0.3, waist: 0.42, head: 'long', hand: 'hand', arm: 0.75, blade: 1.3 }),
+    { id: 'fob', name: 'Fob', family: 1, build: stalker({ legs: 6, legLen: 1.5, legR: 0.09, hipR: 0.3, torso: 1.0, chest: 0.26, waist: 0.48, head: 'long', hand: 'eye', arm: 0.75, blade: 1.4 }),
       hp: 110, speed: 2.6, dmg: 2, r: 0.7, h: 3.4, move: 'walk', from: 35, weight: 2, score: 25 },
     { id: 'runner', name: 'Löparen', family: 7, build: runner, hp: 50, speed: 4.6, dmg: 1, r: 0.5, h: 2.0, move: 'walk', stride: 0.5, from: 45, weight: 2, score: 20 },
-    { id: 'olt', name: 'Olt', family: 1, build: stalker({ legs: 4, legLen: 1.3, legR: 0.11, hipR: 0.25, torso: 0.9, chest: 0.3, waist: 0.35, head: 'spiky', hand: 'claw', arm: 0.7, blade: 1.5 }),
+    { id: 'olt', name: 'Olt', family: 1, build: stalker({ legs: 4, legLen: 1.3, legR: 0.11, hipR: 0.25, torso: 0.9, chest: 0.3, waist: 0.35, head: 'antler', hand: 'claw', arm: 0.7, blade: 1.5 }),
       hp: 120, speed: 2.8, dmg: 2, r: 0.7, h: 3.0, move: 'walk', from: 60, weight: 2, score: 25 },
     { id: 'bok', name: 'Bok', family: 7, build: bok, hp: 45, speed: 4.0, dmg: 1, r: 0.45, h: 1.3, move: 'walk', stride: 0.35, from: 60, weight: 2, score: 15 },
     { id: 'tangle', name: 'Trassel', family: 2, build: tangle, hp: 80, speed: 3.2, dmg: 2, r: 0.6, h: 2.8, move: 'walk', from: 75, weight: 2, score: 20 },
