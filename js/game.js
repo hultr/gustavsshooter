@@ -426,7 +426,8 @@
       poisonT -= dt;
       if ((poisonTick += dt) >= POISON_TICK) { poisonTick = 0; playerHit(1); }
     } else if (hp < MAX_HP && hurtT > 8 && (regenT += dt) > 4) { regenT = 0; hp++; drawHearts(); }
-    $('poison').style.opacity = poisonT > 0 ? 0.35 + Math.sin(time * 6) * 0.15 : 0;
+    // a poison tick can end the game; the menu has hidden the glow then
+    $('poison').style.opacity = poisonT > 0 && running ? 0.35 + Math.sin(time * 6) * 0.15 : 0;
   }
 
   // ---------- Round / menus ----------
