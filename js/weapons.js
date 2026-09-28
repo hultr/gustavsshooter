@@ -4,7 +4,7 @@ window.GS = window.GS || {};
 
 (function () {
   const S = GS.Sketch;
-  const METAL = '#b8b5ad', DARK = '#77736b', WOOD = '#c28a52', PAPER = '#efe9da';
+  const METAL = '#b8b5ad', DARK = '#77736b', WOOD = '#c28a52', PAPER = '#efe9da', BRASS = '#d9b25a', OLIVE = '#7d8a4a';
 
   const weapons = [
     {
@@ -86,6 +86,73 @@ window.GS = window.GS || {};
         S.poly(ctx, [[60, 60], [100, 58], [100, 92], [60, 95]], null);
         [[300, 30], [340, 40], [370, 22]].forEach(p =>
           S.poly(ctx, [[p[0], p[1]], [p[0] + 22, p[1] - 3], [p[0] + 28, p[1] + 2], [p[0] + 22, p[1] + 7], [p[0], p[1] + 5]], '#d9b25a', 1));
+      },
+    },
+    // ---------- From sketches/monstersandweapons2.png ----------
+    {
+      id: 'keysniper', name: 'Nyckel sniper', price: '1M',
+      auto: false, fireDelay: 1.3, mag: 4, reload: 3.0, spread: 0.03, zoom: true, kick: 2.8, damage: 400,
+      pierce: true, // "powerful": the bullet goes through every monster in a line
+      muzzle: [410, 106],
+      draw(ctx) {
+        // stepped barrel, scope on top and a key ring at the back
+        S.circle(ctx, 60, 106, 32, BRASS);
+        S.circle(ctx, 60, 106, 13, PAPER);
+        S.rect(ctx, 90, 92, 130, 30, METAL);
+        S.rect(ctx, 220, 96, 90, 20, DARK);
+        S.rect(ctx, 310, 100, 100, 12, METAL);
+        S.rect(ctx, 150, 58, 100, 20, DARK);
+        S.rect(ctx, 170, 78, 10, 14, DARK);
+        S.rect(ctx, 225, 78, 10, 14, DARK);
+        S.circle(ctx, 250, 68, 9, '#9fd3f0');
+        S.poly(ctx, [[130, 122], [158, 122], [150, 172], [124, 168]], DARK);
+      },
+    },
+    {
+      id: 'laser', name: 'AR laser', price: '2M',
+      auto: true, fireDelay: 0.08, mag: 50, reload: 1.8, spread: 0.004, zoom: false, kick: 0.25, damage: 18,
+      beam: 0xff3b2f, sound: 'laser',
+      muzzle: [392, 95],
+      draw(ctx) {
+        // tube barrel with two rings and a glowing tip
+        S.rect(ctx, 110, 78, 150, 34, METAL);
+        S.rect(ctx, 260, 88, 125, 14, DARK);
+        [285, 345].forEach(x => { S.rect(ctx, x - 7, 70, 14, 50, METAL); });
+        S.circle(ctx, 385, 95, 9, '#ff4a3a');
+        S.poly(ctx, [[20, 84], [110, 84], [110, 106], [20, 112]], DARK);
+        for (let x = 30; x < 105; x += 15) S.line(ctx, x, 84, x + 8, 110);
+        S.poly(ctx, [[150, 112], [180, 112], [172, 165], [144, 160]], DARK);
+      },
+    },
+    {
+      id: 'rpg', name: 'RPG', price: '5M',
+      auto: false, fireDelay: 0.8, mag: 1, reload: 2.2, spread: 0.004, zoom: false, kick: 2.5, damage: 260,
+      rocket: { speed: 38, radius: 5 }, sound: 'rocket',
+      muzzle: [400, 100],
+      draw(ctx) {
+        // long tube with the pointy rocket sticking out
+        S.poly(ctx, [[20, 80], [60, 88], [60, 112], [20, 120]], DARK);
+        S.rect(ctx, 60, 88, 270, 24, OLIVE);
+        S.poly(ctx, [[330, 84], [380, 90], [402, 100], [380, 110], [330, 116]], '#9aa06a');
+        S.rect(ctx, 160, 72, 18, 16, DARK);
+        S.poly(ctx, [[150, 112], [175, 112], [168, 160], [142, 156]], DARK);
+        S.poly(ctx, [[225, 112], [248, 112], [244, 150], [220, 148]], DARK);
+      },
+    },
+    {
+      id: 'minigun', name: 'Minigun', price: '10M',
+      auto: true, fireDelay: 0.035, mag: 200, reload: 4.0, spread: 0.045, zoom: false, kick: 0.35, damage: 11,
+      spin: 0.6, slow: 0.6, // must spin up first, and it is heavy
+      muzzle: [405, 100],
+      draw(ctx) {
+        // fat bundle of barrels, round front, handle on top
+        S.rect(ctx, 60, 60, 120, 80, DARK);
+        S.rect(ctx, 175, 70, 205, 60, METAL);
+        [84, 100, 116].forEach(y => S.line(ctx, 180, y, 378, y));
+        S.circle(ctx, 382, 100, 30, METAL);
+        [[382, 86], [370, 108], [394, 108]].forEach(p => S.circle(ctx, p[0], p[1], 6, DARK));
+        S.poly(ctx, [[90, 60], [100, 28], [165, 28], [172, 60], [158, 60], [152, 40], [112, 40], [104, 60]], null);
+        S.poly(ctx, [[110, 140], [140, 140], [134, 195], [104, 190]], DARK);
       },
     },
   ];

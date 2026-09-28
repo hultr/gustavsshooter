@@ -6,6 +6,8 @@
 //   3  small crawlers – Bek (worm), Durk (on wheels), Dir (hopping head)
 //   5  the leaper     – long grasshopper legs, jumps at you
 //   7  runners        – Runner (spiky hair, long arms), Bok (hairy with a big claw)
+// From sketches/monstersandweapons2.png (no number):
+//      Gob            – head full of teeth, curved blade on one arm
 window.GS = window.GS || {};
 
 GS.Monsters = (function () {
@@ -29,7 +31,7 @@ GS.Monsters = (function () {
 
   const C = {
     bone: 0xe6dfcc, blade: 0x3a3a40, dark: 0x3b302a, mouth: 0x2a1212, eye: 0xfff06a,
-    bark: 0x94805f, moss: 0x9fae80, slime: 0xc4d68f, pink: 0xe6bca8, grey: 0xb4a9c8, rust: 0xcf9f72,
+    bark: 0x94805f, moss: 0x9fae80, gob: 0xcfc9bd, tooth: 0xfffbe8, slime: 0xc4d68f, pink: 0xe6bca8, grey: 0xb4a9c8, rust: 0xcf9f72,
   };
   const PI = Math.PI;
 
@@ -320,6 +322,44 @@ GS.Monsters = (function () {
     return R;
   }
 
+  // ---------- Gob ----------
+  function gob() {
+    const R = rig(), b = R.body, col = C.gob;
+    for (const s of [-1, 1]) {
+      const t = joint(b, [s * 0.14, 1.22, 0]);
+      part(R, t, limb(0.08, 0.06, 0.62), col);
+      const k = joint(t, [0, -0.62, 0], [0.15, 0, 0]);
+      part(R, k, limb(0.06, 0.05, 0.56), col);
+      part(R, k, box(0.14, 0.06, 0.14), C.dark, { p: [0, -0.42, 0] });
+      part(R, k, box(0.12, 0.06, 0.26), C.dark, { p: [0, -0.57, 0.06] });
+      swing(R, t, 0.6, s > 0 ? 0 : PI);
+    }
+    part(R, b, trunk(0.25, 0.18, 0.8), col, { p: [0, 1.15, 0] });
+    part(R, b, trunk(0.06, 0.07, 0.18), col, { p: [0, 1.93, 0] });
+    const head = joint(b, [0, 2.3, 0]);
+    part(R, head, ball(0.25), col, { head: true });
+    // the whole face is a mouth full of teeth
+    part(R, head, ball(0.2), C.mouth, { p: [0, -0.01, 0.1], s: [0.85, 1.05, 0.8], glow: true, head: true });
+    for (let i = 0; i < 5; i++) {
+      const x = (i - 2) * 0.05;
+      part(R, head, spike(0.028, 0.11), C.tooth, { p: [x, 0.14, 0.2], r: [PI, 0, 0], head: true });
+      part(R, head, spike(0.028, 0.11), C.tooth, { p: [x, -0.15, 0.2], head: true });
+    }
+    // blade arm
+    const ba = joint(b, [0.28, 1.88, 0], [0, 0, 0.25]);
+    part(R, ba, limb(0.06, 0.05, 0.55), col);
+    const bf = joint(ba, [0, -0.55, 0], [-0.5, 0, 0]);
+    part(R, bf, limb(0.05, 0.045, 0.5), col);
+    part(R, bf, spike(0.18, 1.1), C.blade, { p: [0, -0.3, 0.05], r: [PI - 0.5, 0, 0], s: [0.25, 1, 1] });
+    arm(R, ba, 0, 1.1);
+    // claw arm
+    const ca = joint(b, [-0.28, 1.88, 0], [0, 0, -0.25]);
+    part(R, ca, limb(0.06, 0.045, 1.0), col);
+    claws(R, joint(ca, [0, -1.0, 0]), 4, 0.16, C.dark);
+    arm(R, ca, PI);
+    return R;
+  }
+
   // ---------- Species table ----------
   // speed m/s and attack rate are multiplied by the difficulty, which grows over time.
   // from: seconds into the fight before it starts showing up.
@@ -329,6 +369,7 @@ GS.Monsters = (function () {
       hp: 90, speed: 3.0, dmg: 2, r: 0.6, h: 3.0, move: 'walk', from: 0, weight: 3, score: 20 },
     { id: 'dir', name: 'Dir', family: 3, build: dir, hp: 25, speed: 3.6, dmg: 1, r: 0.3, h: 0.8, move: 'hop', jump: 4, from: 15, weight: 2, score: 10 },
     { id: 'durk', name: 'Durk', family: 3, build: durk, hp: 60, speed: 3.0, dmg: 1, r: 0.5, h: 1.7, move: 'walk', from: 25, weight: 2, score: 15 },
+    { id: 'gob', name: 'Gob', family: 0, build: gob, hp: 80, speed: 3.4, dmg: 2, r: 0.5, h: 2.6, move: 'walk', stride: 0.7, from: 30, weight: 2, score: 20 },
     { id: 'fob', name: 'Fob', family: 1, build: stalker({ legs: 6, legLen: 1.5, legR: 0.09, hipR: 0.3, torso: 1.0, chest: 0.3, waist: 0.42, head: 'long', hand: 'hand', arm: 0.75, blade: 1.3 }),
       hp: 110, speed: 2.6, dmg: 2, r: 0.7, h: 3.4, move: 'walk', from: 35, weight: 2, score: 25 },
     { id: 'runner', name: 'Runner', family: 7, build: runner, hp: 50, speed: 4.6, dmg: 1, r: 0.5, h: 2.0, move: 'walk', stride: 0.5, from: 45, weight: 2, score: 20 },
@@ -343,6 +384,7 @@ GS.Monsters = (function () {
 
   // Difficulty over time: slow at first, then faster and faster.
   const speedMul = t => Math.min(2.4, 0.5 + t / 120);
+  const PACE_MIN = 0.7, PACE_MAX = 1.35; // each monster gets its own random pace in this range
   const spawnEvery = t => Math.max(0.7, 4 - t / 45);
   const maxAlive = t => Math.min(28, 5 + Math.floor(t / 8));
 
@@ -424,7 +466,7 @@ GS.Monsters = (function () {
     const scene = map.scene, list = [], meshes = [];
     const nav = makeNav(map), blood = GS.Blood(scene);
     const v2 = new THREE.Vector2(), tmp = new THREE.Vector3();
-    let spawnT = 0, navT = 0;
+    let spawnT = 0, navT = 0, moveSpeed = 1;
 
     function spawn(elapsed) {
       const pool = SPECIES.filter(s => elapsed >= s.from);
@@ -437,6 +479,7 @@ GS.Monsters = (function () {
       const m = {
         sp, R, hp: sp.hp, pos: R.root.position, vy: 0, yaw: 0, dir: new THREE.Vector2(0, 1),
         state: 'walk', at: 0, cd: 0, stun: 0, flash: 0, dead: -1, t: 0,
+        pace: PACE_MIN + Math.random() * (PACE_MAX - PACE_MIN),
         walk: Math.random() * 6, gait: 0, moved: 0, hopT: 0.5, hopX: 0, hopZ: 0, los: false, losT: 0,
       };
       R.meshes.forEach(p => { p.userData.monster = m; meshes.push(p); });
@@ -491,7 +534,7 @@ GS.Monsters = (function () {
       m.dir.normalize();
       turnTo(m, d < 4 ? Math.atan2(dx, dz) : Math.atan2(m.dir.x, m.dir.y), dt);
 
-      const s = sp.speed * mul * (m.stun > 0 ? 0 : 1);
+      const s = sp.speed * mul * m.pace * moveSpeed * (m.stun > 0 ? 0 : 1);
       if (fly) {
         const alt = d > 6 ? 3.2 + Math.sin(m.t * 2) * 0.4 : target.y + 1.3;
         p.y += (alt - p.y) * Math.min(1, dt * 2);
@@ -568,9 +611,27 @@ GS.Monsters = (function () {
       const m = hit.object.userData.monster;
       if (!m || m.dead >= 0) return null;
       const head = hit.object.userData.head;
-      m.hp -= amount * (head ? 2 : 1);
-      blood.spray(hit.point, dir, head ? 16 : 9);
       if (hit.face) blood.stick(hit.object, hit.point, tmp.copy(hit.face.normal).transformDirection(hit.object.matrixWorld));
+      return hurt(m, amount * (head ? 2 : 1), head, hit.point, dir);
+    }
+
+    // Explosion: damage falls off with distance from the centre
+    function blast(point, radius, amount) {
+      const out = [], dir = new THREE.Vector3();
+      for (const m of list) {
+        if (m.dead >= 0) continue;
+        tmp.set(m.pos.x, m.pos.y + m.sp.h * 0.5, m.pos.z);
+        const d = tmp.distanceTo(point), reach = radius + m.sp.r;
+        if (d > reach) continue;
+        dir.subVectors(tmp, point).normalize();
+        out.push(hurt(m, amount * (1 - 0.6 * d / reach), false, tmp.clone(), dir));
+      }
+      return out;
+    }
+
+    function hurt(m, amount, head, point, dir) {
+      m.hp -= amount;
+      blood.spray(point, dir, head ? 16 : 9);
       m.stun = 0.12;
       if (!m.flash) m.R.meshes.forEach(p => { p.userData.mat = p.material; p.material = FLASH; });
       m.flash = 0.06;
@@ -637,7 +698,7 @@ GS.Monsters = (function () {
       blood.reset();
     }
 
-    return { list, meshes, update, damage, pushOut, reset, speedMul };
+    return { list, meshes, update, damage, blast, pushOut, reset, speedMul, setSpeed: k => { moveSpeed = k; } };
   }
 
   return { create, SPECIES };

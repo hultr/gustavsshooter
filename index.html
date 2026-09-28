@@ -51,7 +51,9 @@
       <button id="resumeBtn" class="big" hidden>RESUME</button>
     </div>
     <button id="styleBtn" class="toggle">Gun style: 3D</button>
-    <p class="help desktop-only">WASD move · Mouse aim · Click shoot · Right-click zoom · R reload · 1–5 / wheel change gun · Space jump · Shift run · V gun style · Esc/P menu</p>
+    <label id="speedPick" class="monsters-only">Monster speed: <b id="speedVal">100%</b>
+      <input id="speedRange" type="range" min="40" max="160" step="10" value="100"></label>
+    <p class="help desktop-only">WASD move · Mouse aim · Click shoot · Right-click zoom · R reload · 1–9 / wheel change gun · Space jump · Shift run · V gun style · Esc/P menu</p>
     <p class="help touch-only">Left thumb: move · Right thumb: aim · Buttons: fire, reload, zoom, gun</p>
   </div>
 </div>

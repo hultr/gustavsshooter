@@ -4,7 +4,7 @@
 window.GS = window.GS || {};
 
 GS.Viewmodel = (function () {
-  const COL = { metal: 0x9d9a92, dark: 0x4f4c47, wood: 0xb57b45, skin: 0xf1c9a2, sleeve: 0x3f6e9e, lens: 0x7fc4ea, white: 0xffffff, brass: 0xd9b25a };
+  const COL = { metal: 0x9d9a92, dark: 0x4f4c47, wood: 0xb57b45, skin: 0xf1c9a2, sleeve: 0x3f6e9e, lens: 0x7fc4ea, white: 0xffffff, brass: 0xd9b25a, olive: 0x6f7c40, laser: 0xff4a3a };
   const EDGE = new THREE.LineBasicMaterial({ color: 0x1e1e1e });
   const mats = {};
   const mat = c => mats[c] || (mats[c] = new THREE.MeshLambertMaterial({ color: c }));
@@ -134,6 +134,55 @@ GS.Viewmodel = (function () {
       part(g, B(0.04, 0.05, 0.07), 'metal', 0, 0.03, 0.1);
       return { muzzle: [0.03, -0.28], grip: { y: -0.04, z: 0.02, a: -0.2 }, fore: { y: -0.1, z: -0.1 }, hip: [0.16, -0.17, -0.5] };
     },
+
+    // ---------- sketches/monstersandweapons2.png ----------
+    keysniper(g) { // "Nyckel sniper": stepped barrel, scope, a key ring at the back
+      part(g, B(0.05, 0.06, 0.3), 'metal', 0, 0.02, -0.05);
+      part(g, B(0.04, 0.045, 0.22), 'dark', 0, 0.025, -0.31);
+      part(g, B(0.028, 0.03, 0.26), 'metal', 0, 0.03, -0.55);
+      part(g, C(0.022, 0.26), 'dark', 0, 0.1, -0.08);
+      disc(g, 0.02, 'lens', 0, 0.1, -0.211, Math.PI);
+      part(g, B(0.012, 0.04, 0.015), 'dark', 0, 0.065, -0.15);
+      part(g, B(0.012, 0.04, 0.015), 'dark', 0, 0.065, 0);
+      part(g, new THREE.TorusGeometry(0.075, 0.022, 6, 14).rotateY(Math.PI / 2), 'brass', 0, 0.01, 0.2);
+      part(g, B(0.028, 0.08, 0.04), 'dark', 0, -0.035, 0.06, -0.3);
+      return { muzzle: [0.03, -0.69], grip: { y: -0.03, z: 0.06, a: -0.3 }, fore: { y: -0.012, z: -0.3 }, hip: [0.17, -0.18, -0.55] };
+    },
+    laser(g) { // "AR" laser gun: tube barrel with two coils and a glowing tip
+      part(g, B(0.05, 0.06, 0.28), 'metal', 0, 0.02, -0.05);
+      part(g, C(0.014, 0.3), 'dark', 0, 0.025, -0.33);
+      [-0.26, -0.4].forEach(z => part(g, new THREE.TorusGeometry(0.035, 0.009, 6, 12), 'metal', 0, 0.025, z));
+      part(g, new THREE.SphereGeometry(0.018, 8, 6), 'laser', 0, 0.025, -0.49, 0, false).material = new THREE.MeshBasicMaterial({ color: COL.laser });
+      for (let i = 0; i < 4; i++) part(g, B(0.04, 0.012, 0.03), 'dark', 0, 0.02 - (i % 2) * 0.02, 0.12 + i * 0.045, 0.5);
+      part(g, B(0.028, 0.09, 0.04), 'dark', 0, -0.04, 0.05, -0.3);
+      return { muzzle: [0.025, -0.5], grip: { y: -0.035, z: 0.05, a: -0.3 }, fore: { y: -0.01, z: -0.22 }, hip: [0.16, -0.17, -0.52] };
+    },
+    rpg(g) { // "RPG": long olive tube with the rocket sticking out of the front
+      part(g, C(0.04, 0.85, 10), 'olive', 0, 0.04, -0.1);
+      part(g, new THREE.CylinderGeometry(0.06, 0.04, 0.1, 10).rotateX(Math.PI / 2), 'dark', 0, 0.04, 0.37);
+      const round = part(g, new THREE.ConeGeometry(0.045, 0.16, 8).rotateX(-Math.PI / 2), 0x9aa06a, 0, 0.04, -0.6);
+      part(g, B(0.015, 0.035, 0.03), 'dark', -0.035, 0.09, -0.1);
+      part(g, B(0.03, 0.09, 0.04), 'dark', 0, -0.035, 0.03, -0.25);
+      part(g, B(0.03, 0.07, 0.035), 'dark', 0, -0.03, -0.2, -0.1);
+      return { muzzle: [0.04, -0.6], grip: { y: -0.035, z: 0.03, a: -0.25 }, fore: { y: -0.06, z: -0.2 }, hip: [0.16, -0.19, -0.5], round, dipTurn: 0.25 };
+    },
+    minigun(g) { // "Minigun": spinning barrel bundle, round front, handle on top
+      part(g, B(0.1, 0.1, 0.2), 'dark', 0, 0.02, 0.02);
+      const spinner = new THREE.Group();
+      spinner.position.set(0, 0.02, -0.25);
+      g.add(spinner);
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2;
+        part(spinner, C(0.009, 0.4, 6), 'metal', Math.cos(a) * 0.028, Math.sin(a) * 0.028, -0.05);
+      }
+      part(spinner, C(0.048, 0.03, 12), 'metal', 0, 0, -0.2);
+      part(spinner, C(0.048, 0.03, 12), 'metal', 0, 0, 0.05);
+      part(g, B(0.015, 0.015, 0.14), 'dark', 0, 0.105, 0.02);
+      part(g, B(0.015, 0.05, 0.015), 'dark', 0, 0.08, -0.045);
+      part(g, B(0.015, 0.05, 0.015), 'dark', 0, 0.08, 0.085);
+      part(g, B(0.03, 0.09, 0.045), 'dark', 0, -0.07, 0.07, -0.25);
+      return { muzzle: [0.02, -0.46], grip: { y: -0.065, z: 0.07, a: -0.25 }, fore: { y: -0.03, z: -0.14 }, hip: [0.16, -0.2, -0.5], spinner };
+    },
   };
 
   function flashTexture() {
@@ -185,14 +234,17 @@ GS.Viewmodel = (function () {
 
     function fire() { flashT = 0.05; flash.material.rotation = Math.random() * Math.PI; }
 
-    // s: { bob, recoil, dip }
+    // s: { bob, recoil, dip, spin (0..1 minigun spin-up), loaded (RPG has a rocket) }
     function update(dt, s) {
+      if (cur.info.spinner) cur.info.spinner.rotation.z += (s.spin || 0) * dt * 40;
+      if (cur.info.round) cur.info.round.visible = s.loaded !== false;
       const hip = cur.info.hip;
       root.position.set(
         hip[0] + Math.cos(s.bob) * 0.008,
         hip[1] + Math.abs(Math.sin(s.bob)) * 0.008 - s.dip * 0.12 - s.recoil * 0.005,
         hip[2] + s.recoil * 0.035);
-      root.rotation.set(s.recoil * 0.1 - s.dip * 0.9, 0.05, s.dip * 0.4);
+      const turn = cur.info.dipTurn || 1; // long guns tilt less when reloading so they don't swing into the camera
+      root.rotation.set(s.recoil * 0.1 - s.dip * 0.9 * turn, 0.05, s.dip * 0.4 * turn);
       flashT -= dt;
       flash.visible = flashT > 0;
     }

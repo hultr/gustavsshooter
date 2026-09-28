@@ -72,7 +72,7 @@ html, body {
   display: flex; gap: 6px;
 }
 #weaponBar .slot {
-  pointer-events: auto; width: 74px; height: 50px; padding: 2px; position: relative; opacity: .7;
+  pointer-events: auto; width: min(74px, 9.5vw); height: min(50px, 6.4vw); padding: 2px; position: relative; opacity: .7;
   background: rgba(250,247,238,.8); border: 2px solid #2b2b2b; border-radius: 5px 3px 6px 4px;
 }
 #weaponBar .slot.active { opacity: 1; border-width: 3px; background: #fff6c8; transform: translateY(-4px); }
@@ -113,6 +113,9 @@ html, body {
   background: #faf7ee; border: 2px solid #2b2b2b; border-radius: 8px 4px 9px 5px;
 }
 .mapBtn.active { opacity: 1; background: #ffe066; border-width: 3px; }
+#speedPick { display: block; margin-top: 12px; font-size: 16px; }
+#speedPick input { width: 200px; vertical-align: middle; accent-color: #c0392b; }
+body:not(.mode-monsters) .monsters-only { display: none; }
 #menuButtons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 button.big {
   font: inherit; font-size: 24px; font-weight: bold; padding: 8px 28px; cursor: pointer;

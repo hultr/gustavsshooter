@@ -66,7 +66,7 @@
     let mx = I.moveX, my = I.moveY;
     const len = Math.hypot(mx, my);
     if (len > 1) { mx /= len; my /= len; }
-    const speed = (I.sprint && !zoomed ? 8.5 : 5.5) * (zoomed ? 0.5 : 1);
+    const speed = (I.sprint && !zoomed ? 8.5 : 5.5) * (zoomed ? 0.5 : 1) * (weapons[current].slow || 1);
     const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
     const vx = (-sin * my + cos * mx) * speed * dt;
     const vz = (-cos * my - sin * mx) * speed * dt;
@@ -93,7 +93,7 @@
   // ---------- Weapons ----------
   const weapons = GS.weapons;
   let current = 0, ammo = weapons.map(w => w.mag), cooldown = 0, reloadT = 0;
-  let zoomed = false, recoil = 0, recoilPitch = 0, flashT = 0;
+  let zoomed = false, recoil = 0, recoilPitch = 0, flashT = 0, spin = 0;
   const gunCanvas = $('gunCanvas'), flash = $('flash'), gunWrap = $('gunWrap'), hud = $('hud');
 
   function buildWeaponBar() {
@@ -113,7 +113,7 @@
   function selectWeapon(i) {
     i = (i + weapons.length) % weapons.length;
     if (i === current && gunCanvas.dataset.drawn) return;
-    current = i; reloadT = 0; cooldown = 0.25; setZoom(false);
+    current = i; reloadT = 0; cooldown = 0.25; spin = 0; setZoom(false);
     const w = weapons[i];
     GS.drawWeapon(gunCanvas, w);
     gunCanvas.dataset.drawn = '1';
@@ -155,20 +155,36 @@
     dir.y += (Math.random() - 0.5) * 2 * spread;
     dir.z += (Math.random() - 0.5) * 2 * spread;
     dir.normalize();
-    raycaster.set(camera.position, dir);
-    const hit = raycaster.intersectObjects(world === maps.monsters ? world.shootables.concat(horde.meshes) : world.shootables, false)[0];
-
-    GS.Audio.shot(w.kick);
+    GS.Audio[w.sound || 'shot'](w.kick);
     recoil = Math.min(1.4, recoil + 0.5 * w.kick);
     recoilPitch += 0.012 * w.kick;
     flashT = 0.05;
     vm.fire();
-    if (hit && hit.object.userData.monster) hitMonster(hit, w);
-    else if (hit) {
+    if (w.rocket) { fireRocket(w); return finishShot(); }
+
+    // Walk along everything the bullet hits; a piercing bullet goes on through monsters
+    raycaster.set(camera.position, dir);
+    raycaster.far = 200;
+    let end = null;
+    const done = new Set();
+    for (const hit of raycaster.intersectObjects(shootables(), false)) {
+      const m = hit.object.userData.monster;
+      end = hit.point;
+      if (m) {
+        if (!done.has(m)) { done.add(m); hitMonster(hit, w.damage); }
+        if (w.pierce) continue;
+        break;
+      }
       const t = hit.object.userData.target;
       if (t && t.down <= 0 && t.fall === 0) hitTarget(t, hit);
       addDecal(hit);
+      break;
     }
+    if (w.beam) addBeam(w.beam, end || tmp.copy(camera.position).addScaledVector(dir, 150));
+    finishShot();
+  }
+
+  function finishShot() {
     if (ammo[current] === 0) setTimeout(startReload, 250);
     updateAmmo();
   }
@@ -187,12 +203,17 @@
     $('score').textContent = stats.score;
   }
 
-  function hitMonster(hit, w) {
-    const r = horde.damage(hit, w.damage, dir);
+  const shootables = () => world === maps.monsters ? world.shootables.concat(horde.meshes) : world.shootables;
+
+  function hitMonster(hit, damage) {
+    const r = horde.damage(hit, damage, dir);
     if (!r) return;
     stats.hits++;
     showHitmarker();
     GS.Audio.hit(r.head);
+    scoreKill(r);
+  }
+  function scoreKill(r) {
     if (r.killed) {
       const pts = Math.round(r.m.sp.score * (r.head ? 1.5 : 1));
       stats.score += pts; stats.kills++; if (r.head) stats.heads++;
@@ -216,6 +237,97 @@
     if (decals.length > 60) { const old = decals.shift(); old.parent.remove(old); }
   }
 
+  // ---------- Laser beams, rockets and explosions ----------
+  const effects = [];   // {obj, life, max, tick(e, dt)}
+  const beamGeo = new THREE.CylinderGeometry(0.02, 0.02, 1, 5).translate(0, 0.5, 0).rotateX(Math.PI / 2);
+  const muzzleAt = out => camera.localToWorld(out.set(0.12, -0.1, -0.5));
+  const UPV = new THREE.Vector3(0, 1, 0);
+
+  function addEffect(obj, life, tick) {
+    world.scene.add(obj);
+    effects.push({ obj, life, max: life, tick });
+  }
+
+  function addBeam(color, end) {
+    const start = muzzleAt(new THREE.Vector3());
+    const m = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    m.position.copy(start);
+    m.lookAt(end);
+    m.scale.set(1, 1, start.distanceTo(end));
+    addEffect(m, 0.07, e => { e.obj.material.opacity = e.life / e.max; });
+  }
+
+  const rocketGeo = new THREE.ConeGeometry(0.07, 0.35, 8).rotateX(Math.PI / 2);
+  const rocketMat = new THREE.MeshLambertMaterial({ color: 0x9aa06a });
+  function fireRocket(w) {
+    const m = new THREE.Mesh(rocketGeo, rocketMat);
+    muzzleAt(m.position);
+    const vel = dir.clone().multiplyScalar(w.rocket.speed);
+    m.lookAt(tmp.copy(m.position).add(vel));
+    const step = new THREE.Vector3();
+    addEffect(m, 4, e => {
+      step.copy(vel).multiplyScalar(e.dt);
+      raycaster.set(m.position, tmp.copy(vel).normalize());
+      raycaster.far = step.length() + 0.1;
+      const hit = raycaster.intersectObjects(shootables(), false)[0];
+      if (hit) { explode(hit.point, w); e.life = 0; return; }
+      m.position.add(step);
+      vel.y -= 0.5 * e.dt; // slight drop
+      if (Math.random() < 0.7) puff(m.position, 0x9a9a9a, 0.25, 0.5);
+    });
+  }
+
+  const puffGeo = new THREE.IcosahedronGeometry(1, 1);
+  function puff(p, color, size, life, grow = 2) {
+    const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
+    m.position.copy(p);
+    m.scale.setScalar(size);
+    addEffect(m, life, e => {
+      const k = 1 - e.life / e.max;
+      e.obj.scale.setScalar(size * (1 + k * grow));
+      e.obj.material.opacity = 1 - k;
+    });
+  }
+
+  function explode(p, w) {
+    const R = w.rocket.radius;
+    GS.Audio.boom();
+    puff(p, 0xffb13a, R * 0.3, 0.4, 2.2);
+    puff(p, 0xfff2a0, R * 0.15, 0.25, 2);
+    for (let i = 0; i < 5; i++) puff(tmp.set(p.x + (Math.random() - 0.5) * R * 0.6, p.y + Math.random() * R * 0.4, p.z + (Math.random() - 0.5) * R * 0.6), 0x555049, R * 0.12, 1.2, 3);
+    if (camera.position.distanceTo(p) < R * 3) shakeT = 0.35;
+    if (world === maps.monsters) {
+      const hits = horde.blast(p, R, w.damage);
+      if (hits.length) { stats.hits++; showHitmarker(); }
+      hits.forEach(scoreKill);
+    } else {
+      for (const t of maps.range.targets) {
+        if (t.down > 0 || t.fall > 0) continue;
+        t.disc.getWorldPosition(tmp);
+        if (tmp.distanceTo(p) < R) {
+          t.down = 3; stats.hits++; stats.score += 5 * t.value;
+          popup(`BOOM! +${5 * t.value}`);
+          $('score').textContent = stats.score;
+        }
+      }
+    }
+  }
+
+  function updateEffects(dt) {
+    for (let i = effects.length - 1; i >= 0; i--) {
+      const e = effects[i];
+      e.dt = dt;
+      e.life -= dt;
+      if (e.life > 0) e.tick(e, dt);
+      if (e.life <= 0) {
+        e.obj.parent && e.obj.parent.remove(e.obj);
+        if (e.obj.material !== rocketMat) e.obj.material.dispose();
+        effects.splice(i, 1);
+      }
+    }
+  }
+  function clearEffects() { effects.forEach(e => { e.life = 0; }); updateEffects(0); }
+
   function updateWeapon(dt) {
     const w = weapons[current];
     if (I.weapon >= 0) selectWeapon(I.weapon);
@@ -227,6 +339,8 @@
     if (reloadT > 0) {
       reloadT -= dt;
       if (reloadT <= 0) { reloadT = 0; ammo[current] = w.mag; updateAmmo(); }
+    } else if (w.spin && (spin = Math.max(0, Math.min(1, spin + (I.fire ? dt : -dt) / w.spin))) < 1) {
+      // minigun still spinning up
     } else if (cooldown <= 0 && (w.auto ? I.fire : I.firePressed)) {
       if (ammo[current] > 0) shoot();
       else if (I.firePressed) { GS.Audio.empty(); startReload(); }
@@ -241,7 +355,7 @@
       `translate(${bobX + recoil * 14}px, ${bobY + recoil * 18 + dip * 120}px) rotate(${12 - recoil * 7 + dip * 25}deg) scaleX(-1)`;
     flashT -= dt;
     flash.style.opacity = flashT > 0 ? 1 : 0;
-    vm.update(dt, { bob: player.bob, recoil, dip });
+    vm.update(dt, { bob: player.bob, recoil, dip, spin, loaded: ammo[current] > 0 });
   }
 
   // Gun style: 3D models with hands, or the original 2D sketches
@@ -331,6 +445,7 @@
     maps.range.targets.forEach(t => { t.down = 0; t.fall = 0; });
     horde.reset();
     decals.splice(0).forEach(d => d.parent.remove(d));
+    clearEffects();
     showTime();
     selectWeapon(current);
   }
@@ -399,6 +514,18 @@
   }
   document.querySelectorAll('.mapBtn').forEach(b => b.addEventListener('click', () => { if (b.dataset.map !== mapId) setMap(b.dataset.map); }));
 
+  // Monster speed setting (movement only), saved between visits
+  function setMonsterSpeed(pct) {
+    $('speedRange').value = pct;
+    $('speedVal').textContent = pct + '%';
+    horde.setSpeed(pct / 100);
+    try { localStorage.setItem('monsterSpeed', pct); } catch (e) {}
+  }
+  let savedSpeed = 100;
+  try { savedSpeed = +localStorage.getItem('monsterSpeed') || 100; } catch (e) {}
+  setMonsterSpeed(savedSpeed);
+  $('speedRange').addEventListener('input', e => setMonsterSpeed(+e.target.value));
+
   $('startBtn').addEventListener('click', () => { started = true; resetRound(); play(); });
   $('resumeBtn').addEventListener('click', play);
   $('exitBtn').addEventListener('click', pause);
@@ -444,6 +571,7 @@
     if (running) {
       updatePlayer(dt);
       updateWeapon(dt);
+      updateEffects(dt);
       if (world === maps.monsters) {
         horde.update(dt, elapsed, player.pos);
         updateHealth(dt);
