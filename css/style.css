@@ -85,6 +85,16 @@ html, body {
   font-size: 30px; font-weight: bold; color: #c0392b; opacity: 0; text-shadow: 2px 2px 0 #fff;
 }
 
+#hurt {
+  position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(circle at center, transparent 45%, rgba(200, 20, 20, .75));
+}
+
+#poison {
+  position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(circle at center, transparent 40%, rgba(60, 200, 30, .8));
+}
+
 /* Menus */
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(40,40,40,.45); padding: 16px; }
 .paper {
@@ -97,6 +107,12 @@ html, body {
 .paper h2 { margin: 0 0 10px; font-size: 22px; color: #c0392b; }
 .paper p { font-size: 17px; line-height: 1.5; }
 .paper .help { font-size: 13px; color: #555; }
+#mapPick { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 6px; }
+.mapBtn {
+  font: inherit; font-size: 16px; padding: 5px 14px; cursor: pointer; opacity: .65;
+  background: #faf7ee; border: 2px solid #2b2b2b; border-radius: 8px 4px 9px 5px;
+}
+.mapBtn.active { opacity: 1; background: #ffe066; border-width: 3px; }
 #menuButtons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 button.big {
   font: inherit; font-size: 24px; font-weight: bold; padding: 8px 28px; cursor: pointer;

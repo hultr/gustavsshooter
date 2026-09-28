@@ -9,7 +9,7 @@ window.GS = window.GS || {};
   const weapons = [
     {
       id: 'pistol', name: 'Pistol', price: 'Free',
-      auto: false, fireDelay: 0.22, mag: 12, reload: 1.1, spread: 0.012, zoom: false, kick: 1,
+      auto: false, fireDelay: 0.22, mag: 12, reload: 1.1, spread: 0.012, zoom: false, kick: 1, damage: 25,
       muzzle: [322, 72],
       draw(ctx) {
         // the "Free" gun: blocky slide and a grip full of holes
@@ -23,7 +23,7 @@ window.GS = window.GS || {};
     },
     {
       id: 'revolver', name: 'Revolver', price: '1k',
-      auto: false, fireDelay: 0.45, mag: 6, reload: 1.6, spread: 0.004, zoom: false, kick: 1.6,
+      auto: false, fireDelay: 0.45, mag: 6, reload: 1.6, spread: 0.004, zoom: false, kick: 1.6, damage: 55,
       muzzle: [345, 70],
       draw(ctx) {
         // rounded barrel + round grip, bigger bullets
@@ -38,7 +38,7 @@ window.GS = window.GS || {};
     },
     {
       id: 'rifle', name: 'Rifle', price: '50k',
-      auto: true, fireDelay: 0.1, mag: 30, reload: 2.0, spread: 0.02, zoom: false, kick: 0.7,
+      auto: true, fireDelay: 0.1, mag: 30, reload: 2.0, spread: 0.02, zoom: false, kick: 0.7, damage: 22,
       muzzle: [405, 74],
       draw(ctx) {
         // long gun with a curved magazine and a stock, like the 50k drawing
@@ -53,7 +53,7 @@ window.GS = window.GS || {};
     },
     {
       id: 'sniper', name: 'Sniper', price: '500k',
-      auto: false, fireDelay: 1.0, mag: 5, reload: 2.6, spread: 0.03, zoom: true, kick: 2.2,
+      auto: false, fireDelay: 1.0, mag: 5, reload: 2.6, spread: 0.03, zoom: true, kick: 2.2, damage: 150,
       muzzle: [412, 76],
       draw(ctx) {
         // the 500k: very long barrel, big scope and the eye on the stock
@@ -73,7 +73,7 @@ window.GS = window.GS || {};
     },
     {
       id: 'smg', name: 'SMG', price: '750k',
-      auto: true, fireDelay: 0.06, mag: 40, reload: 1.8, spread: 0.04, zoom: false, kick: 0.5,
+      auto: true, fireDelay: 0.06, mag: 40, reload: 1.8, spread: 0.04, zoom: false, kick: 0.5, damage: 14,
       muzzle: [335, 74],
       draw(ctx) {
         // the 750k: chunky boxy body, long magazine, spare bullets flying

@@ -40,9 +40,23 @@ GS.Audio = (function () {
     o.start(t); o.stop(t + dur + 0.02);
   }
 
+  function squelch(vol, dur, cutoff) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = noise;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(cutoff, t);
+    f.frequency.exponentialRampToValueAtTime(120, t + dur);
+    const g = ctx.createGain(); env(g, t, vol, dur);
+    src.connect(f).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t + dur + 0.05);
+  }
+
   return {
     init,
     shot,
+    splat: () => { squelch(0.35, 0.25, 900); tone(160, 0.3, 0.08, 'sawtooth', 0.4); },
+    growl: (size = 1) => tone(140 / Math.sqrt(size), 0.6, 0.05, 'sawtooth', 0.6),
+    hurt: () => { tone(260, 0.25, 0.14, 'square', 0.5); squelch(0.2, 0.15, 600); },
     hit: (bull) => tone(bull ? 1320 : 880, 0.12, 0.12, 'triangle', 1.2),
     empty: () => tone(200, 0.05, 0.1, 'square'),
     reload: () => { tone(300, 0.06, 0.08); setTimeout(() => tone(500, 0.06, 0.08), 180); },

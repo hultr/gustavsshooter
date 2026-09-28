@@ -24,7 +24,8 @@ GS.World = (function () {
     return m;
   }
 
-  function build(scene) {
+  function build() {
+    const scene = new THREE.Scene();
     const colliders = [];   // {minX,maxX,minZ,maxZ,top}
     const shootables = [];  // meshes the bullets can hit
     const targets = [];
@@ -159,8 +160,8 @@ GS.World = (function () {
       }
     }
 
-    return { colliders, shootables, targets, update };
+    return { scene, colliders, shootables, targets, update, start: { x: 0, z: 9, yaw: 0 } };
   }
 
-  return { build };
+  return { build, mat, outlined, canvasTex };
 })();

@@ -1,7 +1,17 @@
 # Gustav's Shooter
 
 Browser first-person shooter based on Gustav's drawings in `sketches/`.
-Version 1 is a 3-minute training range with targets.
+Pick a map in the menu:
+
+- **Training range** – shoot targets for 3 minutes.
+- **Monster attack** – Gustav's monsters (`sketches/monsters.png`) come out of the cave at the
+  end of the valley. Slow at first, then faster every wave (30 s). Survive as long as you can.
+  Headshots do double damage, monsters bleed green, family 2 is poisonous.
+  You heal half a heart at a time after a while without getting hit.
+
+Monster families (same number on the sketch = same family):
+1 blade stalkers Fob, Bob, Olt · 2 root things Frot, Tangle, Dhi (flies, poisonous) ·
+3 crawlers Bek, Durk, Dir · 5 the Leaper · 7 runners Runner, Bok.
 
 ## Run
 
@@ -23,7 +33,10 @@ Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoo
 
 | File | What |
 |------|------|
-| `js/world.js` | Range layout, crates, targets |
+| `js/world.js` | Training range: layout, crates, targets |
+| `js/arena.js` | Monster valley map |
+| `js/monsters.js` | Monster models, movement, path finding, difficulty |
+| `js/blood.js` | Green blood drops and splats |
 | `js/weapons.js` | Gun stats + drawings (from `sketches/weapons.png`) |
 | `js/viewmodel.js` | 3D guns + hands (first-person view) |
 | `js/sketch.js` | Pencil-style drawing helpers |
