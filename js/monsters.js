@@ -2,12 +2,12 @@
 // Monsters with the same number on the sketch are one family: they share a colour
 // and a way of moving.
 //   1  blade stalkers – Fob, Bob, Olt (a hand on one arm, a blade on the other)
-//   2  root things    – Frot (walking tree), Tangle (bundle of stalks), Dhi (flies)
+//   2  root things    – Frot (walking tree), Trassel (bundle of stalks), Dhi (flies)
 //   3  small crawlers – Bek (worm), Durk (on wheels), Dir (hopping head)
-//   5  the leaper     – long grasshopper legs, jumps at you
-//   7  runners        – Runner (spiky hair, long arms), Bok (hairy with a big claw)
-// From sketches/monstersandweapons2.png (no number):
-//      Gob            – head full of teeth, curved blade on one arm
+//   5  Hopparen       – long grasshopper legs, jumps at you
+//   7  runners        – Löparen (spiky hair, long arms), Bok (hairy with a big claw)
+// From sketches/monstersandweapons2.png:
+//      Gob            – its own family: head full of teeth, curved blade on one arm
 window.GS = window.GS || {};
 
 GS.Monsters = (function () {
@@ -250,7 +250,7 @@ GS.Monsters = (function () {
     return R;
   }
 
-  // ---------- Family 5: the leaper ----------
+  // ---------- Family 5: Hopparen ----------
   function leaper() {
     const R = rig(), b = R.body;
     for (const s of [-1, 1]) {
@@ -322,7 +322,7 @@ GS.Monsters = (function () {
     return R;
   }
 
-  // ---------- Gob ----------
+  // ---------- Gob (its own family) ----------
   function gob() {
     const R = rig(), b = R.body, col = C.gob;
     for (const s of [-1, 1]) {
@@ -369,15 +369,15 @@ GS.Monsters = (function () {
       hp: 90, speed: 3.0, dmg: 2, r: 0.6, h: 3.0, move: 'walk', from: 0, weight: 3, score: 20 },
     { id: 'dir', name: 'Dir', family: 3, build: dir, hp: 25, speed: 3.6, dmg: 1, r: 0.3, h: 0.8, move: 'hop', jump: 4, from: 15, weight: 2, score: 10 },
     { id: 'durk', name: 'Durk', family: 3, build: durk, hp: 60, speed: 3.0, dmg: 1, r: 0.5, h: 1.7, move: 'walk', from: 25, weight: 2, score: 15 },
-    { id: 'gob', name: 'Gob', family: 0, build: gob, hp: 80, speed: 3.4, dmg: 2, r: 0.5, h: 2.6, move: 'walk', stride: 0.7, from: 30, weight: 2, score: 20 },
+    { id: 'gob', name: 'Gob', family: 'Gob', build: gob, hp: 80, speed: 3.4, dmg: 2, r: 0.5, h: 2.6, move: 'walk', stride: 0.7, from: 30, weight: 2, score: 20 },
     { id: 'fob', name: 'Fob', family: 1, build: stalker({ legs: 6, legLen: 1.5, legR: 0.09, hipR: 0.3, torso: 1.0, chest: 0.3, waist: 0.42, head: 'long', hand: 'hand', arm: 0.75, blade: 1.3 }),
       hp: 110, speed: 2.6, dmg: 2, r: 0.7, h: 3.4, move: 'walk', from: 35, weight: 2, score: 25 },
-    { id: 'runner', name: 'Runner', family: 7, build: runner, hp: 50, speed: 4.6, dmg: 1, r: 0.5, h: 2.0, move: 'walk', stride: 0.5, from: 45, weight: 2, score: 20 },
+    { id: 'runner', name: 'Löparen', family: 7, build: runner, hp: 50, speed: 4.6, dmg: 1, r: 0.5, h: 2.0, move: 'walk', stride: 0.5, from: 45, weight: 2, score: 20 },
     { id: 'olt', name: 'Olt', family: 1, build: stalker({ legs: 4, legLen: 1.3, legR: 0.11, hipR: 0.25, torso: 0.9, chest: 0.3, waist: 0.35, head: 'spiky', hand: 'claw', arm: 0.7, blade: 1.5 }),
       hp: 120, speed: 2.8, dmg: 2, r: 0.7, h: 3.0, move: 'walk', from: 60, weight: 2, score: 25 },
     { id: 'bok', name: 'Bok', family: 7, build: bok, hp: 45, speed: 4.0, dmg: 1, r: 0.45, h: 1.3, move: 'walk', stride: 0.35, from: 60, weight: 2, score: 15 },
-    { id: 'tangle', name: 'Tangle', family: 2, build: tangle, hp: 80, speed: 3.2, dmg: 2, r: 0.6, h: 2.8, move: 'walk', from: 75, weight: 2, score: 20 },
-    { id: 'leaper', name: 'Leaper', family: 5, build: leaper, hp: 70, speed: 6, dmg: 2, r: 0.6, h: 2.3, move: 'hop', jump: 6, from: 90, weight: 2, score: 25 },
+    { id: 'tangle', name: 'Trassel', family: 2, build: tangle, hp: 80, speed: 3.2, dmg: 2, r: 0.6, h: 2.8, move: 'walk', from: 75, weight: 2, score: 20 },
+    { id: 'leaper', name: 'Hopparen', family: 5, build: leaper, hp: 70, speed: 6, dmg: 2, r: 0.6, h: 2.3, move: 'hop', jump: 6, from: 90, weight: 2, score: 25 },
     { id: 'dhi', name: 'Dhi', family: 2, build: dhi, hp: 35, speed: 3.8, dmg: 1, r: 0.6, h: 0.8, move: 'fly', from: 105, weight: 2, score: 20 },
     { id: 'frot', name: 'Frot', family: 2, build: frot, hp: 300, speed: 1.8, dmg: 3, r: 1.0, h: 4.4, move: 'walk', lean: 0.6, from: 120, weight: 1, score: 60 },
   ];

@@ -12,9 +12,9 @@ Pick a map in the menu:
   random pace, so some are quicker than others.
 
 Monster families (same number on the sketch = same family):
-1 blade stalkers Fob, Bob, Olt · 2 root things Frot, Tangle, Dhi (flies, poisonous) ·
-3 crawlers Bek, Durk, Dir · 5 the Leaper · 7 runners Runner, Bok ·
-and Gob (head full of teeth) from `sketches/monstersandweapons2.png`.
+1 blade stalkers Fob, Bob, Olt · 2 root things Frot, Trassel, Dhi (flies, poisonous) ·
+3 crawlers Bek, Durk, Dir · 5 Hopparen · 7 runners Löparen, Bok ·
+and Gob (head full of teeth, its own family) from `sketches/monstersandweapons2.png`.
 
 Weapons 1–5 are from `sketches/weapons.png`; 6–9 from `sketches/monstersandweapons2.png`:
 Nyckel sniper (goes through monsters), AR laser, RPG (explodes), Minigun (spins up, heavy).
