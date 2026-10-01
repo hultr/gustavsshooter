@@ -98,7 +98,7 @@ html, body {
 /* Menus */
 .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(40,40,40,.45); padding: 16px; }
 .paper {
-  background: #faf7ee; max-width: 520px; width: 100%; text-align: center; padding: 22px 26px;
+  background: #faf7ee; max-width: 520px; width: 100%; max-height: 100%; overflow-y: auto; text-align: center; padding: 22px 26px;
   border: 3px solid #2b2b2b; border-radius: 12px 6px 14px 8px / 8px 14px 6px 12px;
   box-shadow: 5px 6px 0 rgba(0,0,0,.3);
   background-image: repeating-linear-gradient(transparent 0 27px, #cfe0f0 27px 28px);
@@ -120,6 +120,18 @@ body:not(.mode-monsters) .monsters-only { display: none; }
 button.big {
   font: inherit; font-size: 24px; font-weight: bold; padding: 8px 28px; cursor: pointer;
   background: #ffe066; border: 3px solid #2b2b2b; border-radius: 10px 5px 12px 6px; box-shadow: 3px 3px 0 #2b2b2b;
+}
+#board h3 { margin: 10px 0 4px; font-size: 20px; }
+#boardTable { margin: 0 auto; border-collapse: collapse; font-size: 16px; min-width: 70%; }
+#boardTable td { padding: 1px 8px; text-align: left; }
+#boardTable td.num { text-align: right; }
+#boardTable tr.me { background: #ffe066; font-weight: bold; }
+#boardTable tr.empty td { color: #888; text-align: center; }
+#nameForm { margin: 6px 0 10px; }
+#nameForm p { margin: 4px 0; }
+#nameInput {
+  font: inherit; font-size: 18px; padding: 4px 8px; width: 220px; user-select: text; -webkit-user-select: text;
+  border: 2px solid #2b2b2b; border-radius: 6px 3px 7px 4px; background: #fff;
 }
 #gfxPick { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
 button.toggle {

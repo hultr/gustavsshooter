@@ -469,6 +469,7 @@
 
   function play() {
     GS.Audio.init();
+    $('board').hidden = true; $('nameForm').hidden = true;
     $('menu').hidden = true;
     hud.hidden = false;
     running = true; I.enabled = true;
@@ -501,6 +502,7 @@
     showMenu('Time is up!',
       `Score: <b>${stats.score}</b><br>Targets hit: ${stats.hits} · Bullseyes: ${stats.bulls}<br>Accuracy: ${acc}%`, false);
     $('startBtn').textContent = 'PLAY AGAIN';
+    offerScore({ score: stats.score });
   }
 
   function gameOver() {
@@ -518,7 +520,65 @@
       `Monsters killed: ${stats.kills} · Headshots: ${stats.heads}` +
       (record ? '' : `<br>Best: ${best.score} (${clock(best.time)})`), false);
     $('startBtn').textContent = 'PLAY AGAIN';
+    offerScore({ score: stats.score, time: elapsed, wave });
   }
+
+  // ---------- Scoreboard (js/scores.js) ----------
+  // After a round: if the score makes the top 10, ask for a name, then show the board.
+  let pending = null;
+  async function offerScore(result) {
+    const board = mapId;
+    pending = null;
+    $('nameForm').hidden = true;
+    if (await GS.Scores.qualifies(board, result.score)) {
+      if (running || board !== mapId) return; // a new round started meanwhile
+      pending = { board, result };
+      let last = '';
+      try { last = localStorage.getItem('playerName') || ''; } catch (e) {}
+      $('nameInput').value = last;
+      $('nameSave').disabled = false;
+      $('nameForm').hidden = false;
+      $('nameInput').focus();
+    }
+    showBoard();
+  }
+  $('nameForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!pending) return;
+    const { board, result } = pending;
+    pending = null;
+    $('nameSave').disabled = true;
+    const name = $('nameInput').value;
+    try { localStorage.setItem('playerName', name); } catch (err) {}
+    const { entry } = await GS.Scores.submit(board, Object.assign({ name }, result));
+    $('nameForm').hidden = true;
+    showBoard(entry);
+  });
+  // keys typed into the name box are not game controls
+  $('nameInput').addEventListener('keydown', e => e.stopPropagation());
+
+  async function showBoard(mine) {
+    const board = mapId, top = await GS.Scores.list(board);
+    if (board !== mapId) return;
+    const monsters = board === 'monsters';
+    $('boardTitle').textContent = '🏆 ' + maps[board].title;
+    const table = $('boardTable');
+    table.textContent = '';
+    if (!top.length) table.insertAdjacentHTML('beforeend', '<tr class="empty"><td>No scores yet – be the first!</td></tr>');
+    let marked = false; // highlight the new entry (first row with its name and score)
+    top.forEach((e, i) => {
+      const tr = table.insertRow();
+      if (mine && !marked && e.name === mine.name && e.score === mine.score) { tr.className = 'me'; marked = true; }
+      [i + 1 + '.', e.name, e.score].concat(monsters ? [clock(e.time) + ' · wave ' + e.wave] : []).forEach((v, k) => {
+        const td = tr.insertCell();
+        td.textContent = v;
+        if (k === 0 || k === 2) td.className = 'num';
+      });
+    });
+    $('boardNote').textContent = GS.Scores.status() === 'online' ? 'Shared scoreboard' : 'Scores on this computer';
+    $('board').hidden = false;
+  }
+  $('boardBtn').addEventListener('click', () => { if ($('board').hidden) showBoard(); else $('board').hidden = true; });
 
   function setMap(id) {
     mapId = id; world = maps[id];
@@ -526,6 +586,7 @@
     document.querySelectorAll('.mapBtn').forEach(b => b.classList.toggle('active', b.dataset.map === id));
     document.body.classList.toggle('mode-monsters', id === 'monsters');
     started = false;
+    $('board').hidden = true; $('nameForm').hidden = true; pending = null;
     showMenu(world.title, world.intro, false);
     resetRound();
   }

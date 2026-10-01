@@ -10,6 +10,8 @@
       screenshots so far): skin and wood colours, mouth size, reload pose.
 
 ## Next features
+- [ ] Shared scoreboard: pick an online option in `docs/scoreboard.md` (Firebase recommended),
+      set it up and fill in `js/scores-config.js`. Until then scores are per computer.
 - [ ] Buying weapons: the weapons have prices (Free, 1k … 10M) but there is no way to earn
       money or buy them yet; all nine are available from the start.
 

@@ -47,7 +47,14 @@ Two buttons in the menu, saved between visits:
   more lifelike motion: knees bend, heads follow you, jaws stretch open, they flinch when hit
   and collapse when they die. Each kind of monster is built once in the background (~0.1–0.5 s).
 
-Phones start on 3D guns and simple monsters; desktop on the detailed ones.
+Both start on the detailed graphics; switch down if a phone or older computer gets slow.
+
+## Scoreboard
+
+Each map has a top 10. When a round ends with a score good enough for it, you type your name.
+The **🏆 Scoreboard** button in the menu shows it. By default the scores are kept on this
+computer; to share one board between everyone, set up one of the online options in
+[`docs/scoreboard.md`](docs/scoreboard.md) and fill in `js/scores-config.js`.
 
 Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoom/jump/gun.
 
@@ -67,6 +74,8 @@ Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoo
 | `js/textures.js` | Textures drawn in code: skins, metal, wood, plastic, reflections |
 | `js/sketch.js` | Pencil-style drawing helpers |
 | `js/game.js` | Player, shooting, round timer, HUD, menus |
+| `js/scores.js` | Scoreboard: local or online (Firebase, Google Sheet, Supabase) |
+| `js/scores-config.js` | Which scoreboard to use (see `docs/scoreboard.md`) |
 | `js/input.js` | Keyboard/mouse + touch controls |
 | `js/audio.js` | Synthesized sounds |
 | `vendor/three.min.js` | Three.js r149 (last classic build, works from `file://`) |

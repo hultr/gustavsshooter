@@ -46,6 +46,16 @@
     </div>
     <h2 id="menuTitle">Training range</h2>
     <p id="menuText">Shoot as many targets as you can in 3 minutes.<br>Bullseye = 10 points.</p>
+    <form id="nameForm" hidden>
+      <p><b>You made the scoreboard!</b> Write your name:</p>
+      <input id="nameInput" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Your name">
+      <button id="nameSave" type="submit" class="toggle">SAVE</button>
+    </form>
+    <div id="board" hidden>
+      <h3 id="boardTitle">Scoreboard</h3>
+      <table id="boardTable"></table>
+      <p id="boardNote" class="help"></p>
+    </div>
     <div id="menuButtons">
       <button id="startBtn" class="big">START</button>
       <button id="resumeBtn" class="big" hidden>RESUME</button>
@@ -53,6 +63,7 @@
     <div id="gfxPick">
       <button id="styleBtn" class="toggle">Guns: 3D</button>
       <button id="monsterStyleBtn" class="toggle">Monsters: Simple</button>
+      <button id="boardBtn" class="toggle">🏆 Scoreboard</button>
     </div>
     <label id="speedPick" class="monsters-only">Monster speed: <b id="speedVal">100%</b>
       <input id="speedRange" type="range" min="40" max="160" step="10" value="100"></label>
@@ -74,6 +85,8 @@
 <script src="js/arena.js"></script>
 <script src="js/blood.js"></script>
 <script src="js/monsters.js"></script>
+<script src="js/scores-config.js"></script>
+<script src="js/scores.js"></script>
 <script src="js/input.js"></script>
 <script src="js/game.js"></script>
 </body>
