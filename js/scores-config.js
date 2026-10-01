@@ -5,7 +5,7 @@
 //   appsscript – Google Sheet + Apps Script:   url: 'https://script.google.com/macros/s/<id>/exec'
 window.GS = window.GS || {};
 GS.SCORE_CONFIG = {
-  backend: 'local',
-  url: '',
+  backend: 'firebase',
+  url: '', // Firebase Realtime Database URL – until it is filled in, scores stay on this computer
   key: '',
 };
