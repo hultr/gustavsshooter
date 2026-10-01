@@ -1,6 +1,6 @@
 // Gustav's monsters (sketches/monsters.png), built in 3D. Two detail levels from the same
-// builders: simple low-poly parts with ink outlines, or detailed organic shapes with
-// textured skin, fangs, talons and more lifelike motion (js/geo.js, js/textures.js).
+// builders: simple low-poly parts with ink outlines, or detailed creatures whose parts melt
+// into one skinned body (js/flesh.js) with fangs, talons and more lifelike motion.
 // Monsters with the same number on the sketch are one family: they share a colour
 // and a way of moving.
 //   1  blade stalkers – Fob, Bob, Olt (a hand on one arm, a blade on the other)
@@ -22,28 +22,40 @@ GS.Monsters = (function () {
   const basic = c => once('b' + c, () => new THREE.MeshBasicMaterial({ color: c }));
 
   // Detail level of the monster being built. Simple: low-poly parts with ink outlines.
-  // Detailed: organic shapes, textured skin, wet eyes, fangs, talons and moving jaws.
+  // Detailed: the flesh parts melt into one skinned creature mesh (js/flesh.js), with
+  // carved mouths and eye sockets, wet eyes, fangs, talons and horns attached to its bones.
   let HD = false, IRIS = 0xd8c21f;
-  const k = s => (HD ? 'H' : '') + s;
 
   // Limbs hang down from their origin and trunks grow up from it,
   // so a joint placed at a hip or shoulder swings the whole piece.
-  const limb = (rt, rb, h, s = 6) => once(k(`l${rt},${rb},${h},${s}`), () => HD ? G.limb(rt, rb, h) : new THREE.CylinderGeometry(rt, rb, h, s).translate(0, -h / 2, 0));
-  const trunk = (rt, rb, h, s = 7) => once(k(`t${rt},${rb},${h},${s}`), () => HD ? G.trunk(rt, rb, h) : new THREE.CylinderGeometry(rt, rb, h, s).translate(0, h / 2, 0));
-  const ball = (r, d = 1) => once(k(`s${r},${d}`), () => HD ? G.blob(r, 0.07, Math.round(r * 100)) : new THREE.IcosahedronGeometry(r, d));
-  const box = (w, h, d) => once(k(`x${w},${h},${d}`), () => HD ? G.roundBox(w, h, d, Math.min(w, h, d) * 0.35) : new THREE.BoxGeometry(w, h, d));
-  const spike = (r, h, s = 4) => once(k(`k${r},${h},${s}`), () => HD ? G.horn(r, h, 0.22) : new THREE.ConeGeometry(r, h, s).translate(0, h / 2, 0));
+  // Each shape also carries its distance-field description (userData.sdf) for the flesh.
+  const tag = (g, sdf) => { g.userData.sdf = sdf; return g; };
+  const limb = (rt, rb, h, s = 6) => once(`l${rt},${rb},${h},${s}`, () => tag(new THREE.CylinderGeometry(rt, rb, h, s).translate(0, -h / 2, 0),
+    { type: 'cone', a: [0, 0, 0], b: [0, -h, 0], r0: rt, r1: rb, prof: 'limb' }));
+  const trunk = (rt, rb, h, s = 7) => once(`t${rt},${rb},${h},${s}`, () => tag(new THREE.CylinderGeometry(rt, rb, h, s).translate(0, h / 2, 0),
+    { type: 'cone', a: [0, 0, 0], b: [0, h, 0], r0: rb, r1: rt, prof: 'trunk', flat: true }));
+  const ball = (r, d = 1) => once(`s${r},${d}`, () => tag(new THREE.IcosahedronGeometry(r, d), { type: 'ellip', r: [r, r, r] }));
+  const box = (w, h, d) => once(`x${w},${h},${d}`, () => tag(new THREE.BoxGeometry(w, h, d), { type: 'box', h: [w / 2, h / 2, d / 2] }));
+  const spike = (r, h, s = 4) => once((HD ? 'H' : '') + `k${r},${h},${s}`, () => HD ? G.horn(r, h, 0.22) : new THREE.ConeGeometry(r, h, s).translate(0, h / 2, 0));
   // a flat blade: simple = a squashed cone (the caller scales it), detailed = a curved edge
-  const blade = (r, h) => once(k(`bl${r},${h}`), () => HD ? G.horn(r, h, 0.3, 'x', 10) : new THREE.ConeGeometry(r, h, 4).translate(0, h / 2, 0));
+  const blade = (r, h) => once((HD ? 'H' : '') + `bl${r},${h}`, () => HD ? G.horn(r, h, 0.3, 'x', 10) : new THREE.ConeGeometry(r, h, 4).translate(0, h / 2, 0));
   const arc = r => once('arc' + r, () => new THREE.TorusGeometry(r, 0.018, 3, 10, Math.PI).rotateZ(Math.PI)); // ink smile
   const edges = g => once('e' + g.uuid, () => new THREE.EdgesGeometry(g, 25));
-  const unitBall = () => once('unitBall', () => new THREE.SphereGeometry(1, 16, 12));
+  // detailed look of a shape that is not flesh (stripes, closed eyes)
+  const smooth = g => once('sm' + g.uuid, () => {
+    const s = g.userData.sdf;
+    if (s.type === 'box') return G.roundBox(s.h[0] * 2, s.h[1] * 2, s.h[2] * 2, Math.min(...s.h) * 0.7);
+    if (s.type === 'ellip') return new THREE.SphereGeometry(s.r[0], 16, 12);
+    return g;
+  });
+  const PROXY = new THREE.MeshBasicMaterial({ visible: false }); // invisible hit shapes of the flesh
 
   const C = {
     bone: 0xe6dfcc, blade: 0x2a2a30, dark: 0x3b302a, mouth: 0x2a1212, ink: 0x1c1c1c, white: 0xf7f4ea,
     bark: 0x94805f, moss: 0x9fae80, gob: 0xcfc9bd, tooth: 0xfffbe8, slime: 0xc4d68f, pink: 0xe6bca8, grey: 0xb4a9c8, rust: 0xcf9f72,
   };
   const PI = Math.PI;
+  const NOT_FLESH = [C.mouth, C.white, C.tooth];
 
   // Detailed skin per colour: [pattern, shininess, specular, bump, colour used]
   const SKINS = {
@@ -63,14 +75,19 @@ GS.Monsters = (function () {
   });
 
   // ---------- Rig: the parts of one monster ----------
+  // Detailed rigs use bones for every joint so the flesh mesh can be skinned to them.
+  // meshes: hit shapes; flash: what turns white when hit; prims/carves: the flesh.
   function rig() {
-    const root = new THREE.Group(), body = new THREE.Group();
+    const root = new THREE.Group(), body = HD ? new THREE.Bone() : new THREE.Group();
     root.add(body);
-    return { root, body, meshes: [], swing: [], arms: [], spin: [], jaws: [], head: null };
+    return { root, body, meshes: [], flash: [], swing: [], arms: [], spin: [], jaws: [], head: null, prims: [], carves: [] };
   }
-  // o: p position, r rotation, s scale, glow (unlit, no outline), head (headshot zone)
+  const anchor = (parent, p) => { const o = new THREE.Object3D(); o.position.fromArray(p); parent.add(o); return o; };
+  // o: p position, r rotation, s scale, glow (unlit, no outline), head (headshot zone), k (flesh blend)
   function part(R, parent, geo, color, o = {}) {
-    const m = new THREE.Mesh(geo, HD ? (o.mat || skin(color)) : o.glow ? basic(color) : lambert(color));
+    const flesh = HD && geo.userData.sdf && !o.glow && !o.mat && !NOT_FLESH.includes(color);
+    const look = HD && geo.userData.sdf && !flesh ? smooth(geo) : geo;
+    const m = new THREE.Mesh(look, flesh ? PROXY : HD ? (o.mat || skin(color)) : o.glow ? basic(color) : lambert(color));
     if (o.p) m.position.fromArray(o.p);
     if (o.r) m.rotation.fromArray(o.r);
     if (o.s) m.scale.fromArray(o.s);
@@ -78,10 +95,12 @@ GS.Monsters = (function () {
     m.userData.head = !!o.head;
     parent.add(m);
     R.meshes.push(m);
+    if (flesh) R.prims.push({ obj: m, sdf: geo.userData.sdf, color, k: o.k });
+    else R.flash.push(m);
     return m;
   }
   function joint(parent, p, r) {
-    const j = new THREE.Group();
+    const j = HD ? new THREE.Bone() : new THREE.Group();
     j.position.fromArray(p);
     if (r) j.rotation.fromArray(r);
     parent.add(j);
@@ -97,12 +116,14 @@ GS.Monsters = (function () {
   const look = (R, j) => { R.head = j; j.userData.base = j.rotation.clone(); return j; };
 
   // Eyes as Gustav draws them: a white almond with a black pupil (unlit, so they read at dusk).
-  // dark: a solid black eye, like Fob's. Detailed: a wet veiny eyeball with a glowing slit iris.
+  // dark: a solid black eye, like Fob's. Detailed: a wet veiny eyeball with a glowing slit
+  // iris, set in a socket carved into the flesh.
   function eye(R, parent, x, y, z, r = 0.05, dark = false) {
     if (HD) {
+      R.carves.push({ obj: anchor(parent, [x, y, z]), sdf: { type: 'ellip', r: [r * 1.6, r * 1.05, r * 0.9] }, k: r * 0.5 });
       const mat = dark ? once('eyeDark', () => new THREE.MeshPhongMaterial({ color: 0x050505, specular: 0xaaaaaa, shininess: 140 }))
         : once('eyeWhite', () => { const t = GS.Tex.skin('eyeball'); return new THREE.MeshPhongMaterial({ color: 0xf4eedc, map: t.map, specular: 0x999999, shininess: 120 }); });
-      const e = part(R, parent, once('eyeball', () => new THREE.SphereGeometry(1, 16, 12)), 0, { p: [x, y, z], s: [r * 1.4, r * 0.8, r * 0.6], head: true, mat });
+      const e = part(R, parent, once('eyeball', () => new THREE.SphereGeometry(1, 16, 12)), 0, { p: [x, y, z - r * 0.25], s: [r * 1.4, r * 0.8, r * 0.6], head: true, mat });
       if (!dark) {
         const irisMat = once('irisMat' + IRIS, () => new THREE.MeshBasicMaterial({ map: GS.Tex.iris(IRIS) }));
         part(R, e, once('irisDisc', () => new THREE.CircleGeometry(0.6, 20)), 0, { p: [0, 0, 1.0], s: [0.8 / 1.4, 1, 1], head: true, mat: irisMat });
@@ -117,15 +138,16 @@ GS.Monsters = (function () {
     eye(R, parent, -dx, y, z, r, dark);
     eye(R, parent, dx, y, z, r, dark);
   }
-  // Rib lines drawn across a chest: small ink smiles. Detailed: bare rib bones poking out.
+  // Rib lines drawn across a chest: small ink smiles. Detailed: ribs showing under the skin,
+  // curving down and round from the breastbone.
   function ribs(R, parent, y0, z, w, n = 3, step = 0.13) {
     for (let i = 0; i < n; i++) {
       if (!HD) { part(R, parent, arc(w * (1 - i * 0.08)), C.ink, { p: [0, y0 - i * step, z], glow: true }); continue; }
-      // two ribs curving down and round from the breastbone, a gap in the middle
-      const rr = z * 1.0, sag = 0.05 + w * 0.45, t = Math.max(0.016, w * 0.12);
-      const geo = once(`rib${rr},${sag},${t}`, () => G.merge([-1, 1].map(sd => G.tube([0.12, 0.4, 0.7, 1.0].map(a =>
-        [sd * Math.sin(a) * rr, -sag * a * a, Math.cos(a) * rr]), t, 10, 6))));
-      part(R, parent, geo, 'bone', { p: [0, y0 - i * step, 0] });
+      const at = anchor(parent, [0, y0 - i * step, 0]), rr = z * 0.96, sag = 0.05 + w * 0.45, t = Math.max(0.014, w * 0.1);
+      for (const sd of [-1, 1]) {
+        const pts = [0.15, 0.55, 0.95, 1.3].map(a => [sd * Math.sin(a) * rr, -sag * a * a, Math.cos(a) * rr]);
+        for (let j = 0; j < 3; j++) R.prims.push({ obj: at, sdf: { type: 'cone', a: pts[j], b: pts[j + 1], r0: t, r1: t * 0.9 }, color: null, k: 0.025 });
+      }
     }
   }
   // A row of n fangs across width w, pointing down (up = false) or up, canines longest
@@ -139,15 +161,15 @@ GS.Monsters = (function () {
     }
     return G.merge(parts);
   });
-  // Detailed mouth: a wet hole with fangs top and bottom; the lower jaw opens and closes.
-  // (x, y, z) is the centre of the mouth on the face, w x h its size.
+  // Detailed mouth: a hole carved into the face, lined with fangs; the chin is flesh on a
+  // jaw bone, so the face stretches when the jaw drops. (x, y, z): centre on the face.
   function maw(R, parent, x, y, z, w, h, n = 7) {
-    // a shallow, nearly black dome on the face reads as the opening
-    part(R, parent, unitBall(), C.mouth, { p: [x, y, z], s: [w * 0.52, h * 0.58, w * 0.22], head: true });
+    R.carves.push({ obj: anchor(parent, [x, y, z]), sdf: { type: 'ellip', r: [w * 0.5, h * 0.55, w * 0.34] }, k: 0.03, mouth: true });
     const len = Math.min(h * 0.7, w * 0.55);
-    part(R, parent, fangRow(w * 0.9, n, len, false), C.tooth, { p: [x, y + h * 0.5, z + w * 0.14], head: true });
+    part(R, parent, fangRow(w * 0.88, n, len, false), C.tooth, { p: [x, y + h * 0.48, z - w * 0.06], head: true });
     const jaw = joint(parent, [x, y - h * 0.05, z - w * 0.25]);
-    part(R, jaw, fangRow(w * 0.8, Math.max(3, n - 1), len * 0.85, true), C.tooth, { p: [0, -h * 0.48, w * 0.39], head: true });
+    R.prims.push({ obj: anchor(jaw, [0, -h * 0.55, w * 0.12]), sdf: { type: 'ellip', r: [w * 0.42, h * 0.3, w * 0.26] }, color: null, k: 0.05 });
+    part(R, jaw, fangRow(w * 0.78, Math.max(3, n - 1), len * 0.85, true), C.tooth, { p: [0, -h * 0.45, w * 0.19], head: true });
     R.jaws.push({ o: jaw, amp: 0.35 + h / w * 0.15 });
   }
   function claws(R, parent, n, len, color, spread = 0.35) {
@@ -543,7 +565,61 @@ GS.Monsters = (function () {
 
   function build(sp, hd) {
     HD = hd; IRIS = sp.blood;
-    try { return sp.build(); } finally { HD = false; }
+    try {
+      const R = sp.build();
+      if (hd) addFlesh(R, sp);
+      return R;
+    } finally { HD = false; }
+  }
+
+  // ---------- Detailed flesh: one skinned mesh per monster ----------
+  // The mesh is baked once per species (it only depends on the rest pose) and shared;
+  // every monster gets its own skeleton made of its own joints.
+  const fleshGeo = {}, fleshMat = {};
+  const hdColor = c => new THREE.Color(SKINS[c] ? SKINS[c][4] : c);
+  const NOISE = { bark: { amp: 0.014, fx: 7, fy: 1.8 }, leather: { amp: 0.008, fx: 11, fy: 11 }, fur: { amp: 0.005, fx: 22, fy: 22 } };
+  // Voxel size from the rough skin area, so every monster ends up with about 12k triangles
+  // (surface nets make ~2 triangles per voxel face on the surface)
+  function voxelFor(prims) {
+    let area = 0;
+    for (const p of prims) {
+      const d = p.sdf, s = p.obj.getWorldScale(new THREE.Vector3());
+      if (d.type === 'cone') area += 2 * PI * Math.max(d.r0, d.r1) * s.x * Math.hypot(...d.b.map((v, i) => v - d.a[i])) * s.y;
+      else if (d.type === 'ellip') area += 4 * PI * ((d.r[0] * s.x * d.r[1] * s.y + d.r[1] * s.y * d.r[2] * s.z + d.r[0] * s.x * d.r[2] * s.z) / 3);
+      else area += 8 * (d.h[0] * d.h[1] + d.h[1] * d.h[2] + d.h[0] * d.h[2]);
+    }
+    return Math.max(0.014, Math.min(0.045, Math.sqrt(area * 1.25 * 2 / 12000)));
+  }
+  function addFlesh(R, sp) {
+    R.root.updateMatrixWorld(true);
+    const bones = [];
+    R.root.traverse(o => { if (o.isBone) bones.push(o); });
+    const boneOf = o => { while (o && !o.isBone) o = o.parent; return Math.max(0, bones.indexOf(o)); };
+    // the biggest part decides the skin texture
+    const vol = p => { const d = p.sdf; return d.type === 'cone' ? Math.hypot(...d.b.map((v, i) => v - d.a[i])) * Math.max(d.r0, d.r1) ** 2 : d.type === 'ellip' ? d.r[0] * d.r[1] * d.r[2] : d.h[0] * d.h[1] * d.h[2]; };
+    const main = R.prims.reduce((a, p) => (p.color && vol(p) > vol(a) ? p : a), R.prims[0]).color;
+    const kind = (SKINS[main] || SKINS[C.bone])[0];
+    if (!fleshGeo[sp.id]) {
+      fleshGeo[sp.id] = GS.Flesh.bake(
+        R.prims.map(p => ({ sdf: p.sdf, world: p.obj.matrixWorld.clone(), bone: boneOf(p.obj), color: p.color === null ? null : hdColor(p.color), k: p.k })),
+        R.carves.map(c => ({ sdf: c.sdf, world: c.obj.matrixWorld.clone(), k: c.k, mouth: c.mouth })),
+        { voxel: voxelFor(R.prims), noise: NOISE[kind] });
+    }
+    if (!fleshMat[kind]) {
+      const [, shininess, specular, bump] = SKINS[main] || SKINS[C.bone], t = GS.Tex.skin(kind);
+      fleshMat[kind] = GS.Flesh.material({ map: t.map, bump: t.bump, bumpScale: bump * 0.25, shininess, specular, tile: kind === 'fur' ? 0.18 : 0.3 });
+    }
+    const mesh = new THREE.SkinnedMesh(fleshGeo[sp.id], fleshMat[kind]);
+    mesh.frustumCulled = false;
+    R.root.add(mesh);
+    mesh.bind(new THREE.Skeleton(bones));
+    R.flash.push(mesh);
+  }
+  // Bake the detailed species one at a time in the background, so they don't stall the game
+  function prebake() {
+    const todo = SPECIES.filter(s => !fleshGeo[s.id]);
+    const next = () => { const sp = todo.shift(); if (!sp) return; if (!fleshGeo[sp.id]) build(sp, true); setTimeout(next, 30); };
+    setTimeout(next, 30);
   }
 
   // Difficulty over time: slow at first, then faster and faster.
@@ -804,7 +880,7 @@ GS.Monsters = (function () {
 
     function unflash(m) {
       m.flash = 0;
-      m.R.meshes.forEach(p => { if (p.userData.mat) { p.material = p.userData.mat; p.userData.mat = null; } });
+      m.R.flash.forEach(p => { if (p.userData.mat) { p.material = p.userData.mat; p.userData.mat = null; } });
     }
 
     // Falls over backwards, bleeds, then sinks into the ground
@@ -880,7 +956,7 @@ GS.Monsters = (function () {
       blood.spray(point, dir, head ? 16 : 9, m.sp.blood);
       m.stun = 0.12;
       m.flinch = Math.min(1.2, m.flinch + 0.5 + amount / m.sp.hp);
-      if (!m.flash) m.R.meshes.forEach(p => { p.userData.mat = p.material; p.material = FLASH; });
+      if (!m.flash) m.R.flash.forEach(p => { p.userData.mat = p.material; p.material = FLASH; });
       m.flash = 0.06;
       if (m.hp > 0) return { killed: false, head, m };
       m.dead = 0; m.state = 'dead'; m.vy = Math.min(m.vy, 0);
@@ -942,6 +1018,7 @@ GS.Monsters = (function () {
     function setDetail(hd) {
       if (hd === detail) return;
       detail = hd;
+      if (hd) prebake();
       for (const m of list) {
         if (m.dead >= 0) continue;
         unflash(m);

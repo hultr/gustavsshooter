@@ -1,5 +1,5 @@
-// Geometry helpers for the detailed graphics: noise, organic shapes (muscled limbs,
-// lumpy blobs, curved horns and claws), beveled side profiles and merged parts.
+// Geometry helpers for the detailed graphics: noise, curved horns, claws and fangs,
+// rounded boxes, tubes, beveled side profiles and merged parts.
 window.GS = window.GS || {};
 
 GS.Noise = (function () {
@@ -86,59 +86,6 @@ GS.Geo = (function () {
     }
     geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     return geo;
-  }
-
-  // Muscled limb hanging down from the origin (length h), rounded at both ends
-  function limb(rt, rb, h, seg = 12) {
-    const pts = [new V2(0, -h - rb * 0.55), new V2(rb * 0.75, -h - rb * 0.4)];
-    const n = 12;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      const r = (rb + (rt - rb) * t) * (1 + 0.2 * Math.exp(-(((t - 0.66) / 0.2) ** 2)) + 0.14 * Math.exp(-(((t - 0.04) / 0.07) ** 2)));
-      pts.push(new V2(r, -h + h * t));
-    }
-    pts.push(new V2(rt * 0.75, rt * 0.4), new V2(0, rt * 0.55));
-    return lumpy(new THREE.LatheGeometry(pts, seg), (rt + rb) * 0.09, 1 / (rt + rb));
-  }
-  // Torso growing up from the origin: belly low, chest high, rounded shoulders
-  function trunk(rt, rb, h, seg = 14) {
-    const pts = [new V2(0, -rb * 0.3), new V2(rb * 0.8, -rb * 0.15)];
-    const n = 14;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      // stays close to the straight taper so parts placed on the surface stay visible
-      const r = (rb + (rt - rb) * t) * (1 + 0.05 * Math.exp(-(((t - 0.75) / 0.15) ** 2)) - 0.07 * Math.exp(-(((t - 0.42) / 0.14) ** 2)));
-      pts.push(new V2(r, h * t));
-    }
-    pts.push(new V2(rt * 0.75, h + rt * 0.2), new V2(0, h + rt * 0.28));
-    return lumpy(new THREE.LatheGeometry(pts, seg), (rt + rb) * 0.05, 1.5 / (rt + rb));
-  }
-
-  // Push vertices in and out along the surface (sinew, knots, swellings). Depends on the
-  // position only, so the seam of a lathe stays closed.
-  function lumpy(g, amp, freq, seed = 5) {
-    g.computeVertexNormals();
-    const p = g.attributes.position, n = g.attributes.normal, v = new V3(), nn = new V3();
-    for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i); nn.fromBufferAttribute(n, i);
-      const k = (N.n3(v.x * freq + 3, v.y * freq * 0.6, v.z * freq, seed) - 0.5) * 2 + 0.5 * (N.n3(v.x * freq * 3, v.y * freq * 2, v.z * freq * 3 + 7, seed + 1) - 0.5);
-      if (Math.abs(nn.y) < 0.95) v.addScaledVector(nn, k * amp);
-      p.setXYZ(i, v.x, v.y, v.z);
-    }
-    g.computeVertexNormals();
-    return g;
-  }
-
-  // Sphere with lumps (amp = lump size as a share of r)
-  function blob(r, amp = 0.07, seed = 3) {
-    const g = new THREE.SphereGeometry(r, 22, 16), p = g.attributes.position, v = new V3();
-    for (let i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i).normalize();
-      const k = 1 + amp * (2 * N.n3(v.x * 2.5 + 9, v.y * 2.5, v.z * 2.5, seed) - 1 + 0.5 * (2 * N.n3(v.x * 6, v.y * 6, v.z * 6 + 4, seed + 1) - 1));
-      p.setXYZ(i, v.x * r * k, v.y * r * k, v.z * r * k);
-    }
-    g.computeVertexNormals();
-    return g;
   }
 
   // Tapered horn/claw/fang from the origin to about (0, h, 0), bending its tip towards -z
@@ -245,5 +192,5 @@ GS.Geo = (function () {
     return new THREE.LatheGeometry(pts.map(([z, r]) => new V2(r, -z)), seg).rotateX(-PI / 2);
   }
 
-  return { merge, place, projectUV, limb, trunk, blob, horn, roundBox, tube, shape, side, lathe };
+  return { merge, place, projectUV, horn, roundBox, tube, shape, side, lathe };
 })();

@@ -4,7 +4,8 @@
 - [ ] Try it on a real phone: how smooth is it with many monsters? Touch devices are capped at
       16 monsters at once (desktop up to 28) because each monster costs ~30–60 draw calls.
 - [ ] Try the detailed graphics on a phone (they start off there) and on a slower computer.
-      Detailed monsters are ~12–43 draw calls and ~4–11k triangles each.
+      Detailed monsters are ~6–27 draw calls and ~12–20k triangles each (skin + teeth/claws);
+      the skin resolution is set in `voxelFor()` in `js/monsters.js`.
 - [ ] Look at the detailed monsters and guns in a real browser (only checked in headless
       screenshots so far): skin and wood colours, mouth size, reload pose.
 
@@ -23,7 +24,8 @@
 
 ## Done
 - [x] Graphics settings: guns Sketch / 3D / Detailed 3D, monsters Simple / Detailed.
-- [x] Detailed monsters: organic textured bodies, fangs, talons, wet eyes, lifelike motion.
+- [x] Detailed monsters: one continuous skinned body per monster (distance fields + surface
+      nets), carved mouths/eye sockets, fangs, talons, wet eyes, lifelike motion.
 - [x] Detailed guns: metal/wood/plastic textures, moving parts, casings, recoil and sway.
 - [x] Blood colour per family (no red).
 - [x] Monsters reshaped from the high-res photo `sketches/monstershires.jpg`.

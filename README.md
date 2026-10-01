@@ -41,9 +41,11 @@ Two buttons in the menu, saved between visits:
 - **Guns: Sketch / 3D / Detailed 3D** – Gustav's 2D drawings, simple 3D models, or detailed
   models with textured metal, wood and plastic, gloved hands, spring recoil and sway, working
   slides/bolts/revolver cylinder, flying casings and magazine changes.
-- **Monsters: Simple / Detailed** – low-poly with ink outlines, or organic bodies with textured
-  skin, wet eyes, fangs and talons, and more lifelike motion: knees bend, heads follow you,
-  jaws snap, they flinch when hit and collapse when they die.
+- **Monsters: Simple / Detailed** – low-poly with ink outlines, or real-looking creatures: the
+  body parts are melted into one continuous skin that bends with the skeleton, with carved
+  mouths and eye sockets, ribs under the skin, textured hide, wet eyes, fangs and talons, and
+  more lifelike motion: knees bend, heads follow you, jaws stretch open, they flinch when hit
+  and collapse when they die. Each kind of monster is built once in the background (~0.1–0.5 s).
 
 Phones start on 3D guns and simple monsters; desktop on the detailed ones.
 
@@ -60,7 +62,8 @@ Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoo
 | `js/weapons.js` | Gun stats + drawings (from `sketches/weapons.png`) |
 | `js/viewmodel.js` | 3D guns + hands (first-person view), detailed gun motion |
 | `js/guns-hd.js` | Detailed 3D guns and gloved hands |
-| `js/geo.js` | Noise and shape helpers: muscled limbs, horns, claws, beveled profiles |
+| `js/flesh.js` | Detailed monster skin: distance fields melted together, surface nets, skinning |
+| `js/geo.js` | Noise and shape helpers: horns, claws, fangs, beveled profiles |
 | `js/textures.js` | Textures drawn in code: skins, metal, wood, plastic, reflections |
 | `js/sketch.js` | Pencil-style drawing helpers |
 | `js/game.js` | Player, shooting, round timer, HUD, menus |
