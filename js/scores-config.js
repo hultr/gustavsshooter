@@ -6,6 +6,6 @@
 window.GS = window.GS || {};
 GS.SCORE_CONFIG = {
   backend: 'firebase',
-  url: '', // Firebase Realtime Database URL – until it is filled in, scores stay on this computer
+  url: 'https://scoreboard-9660d-default-rtdb.europe-west1.firebasedatabase.app',
   key: '',
 };

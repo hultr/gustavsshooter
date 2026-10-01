@@ -35,6 +35,7 @@ far more than a scoreboard needs. Never sleeps. Needs a Google account.
        "scores": {
          "$board": {
            ".read": "$board === 'range' || $board === 'monsters'",
+           ".validate": "$board === 'range' || $board === 'monsters'",
            ".indexOn": ["score"],
            "$id": {
              ".write": "!data.exists()",
