@@ -1,4 +1,6 @@
 // 3D first-person guns + hands, built from simple boxes/cylinders to match the sketches.
+// The detailed guns (js/guns-hd.js) are built the first time they are switched on and get
+// extra motion: spring recoil, sway, working slides/bolts, casings, magazine drops.
 // Rendered in a separate pass (own scene + camera) so guns never clip into walls.
 // Gun-local space: origin at the top of the grip, +y up, barrel pointing -z.
 window.GS = window.GS || {};
@@ -200,7 +202,17 @@ GS.Viewmodel = (function () {
     return new THREE.CanvasTexture(c);
   }
 
-  function create() {
+  // soft round puff for gun smoke
+  function smokeTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(220,220,215,.55)'); grd.addColorStop(1, 'rgba(220,220,215,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  }
+
+  function create(renderer) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 5);
     scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8070, 0.75));
@@ -210,7 +222,8 @@ GS.Viewmodel = (function () {
 
     const root = new THREE.Group();
     scene.add(root);
-    const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTexture(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    const flashTex = flashTexture();
+    const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
     flash.scale.setScalar(0.12);
 
     const models = GS.weapons.map(w => {
@@ -223,35 +236,201 @@ GS.Viewmodel = (function () {
       return { g, info };
     });
 
+    // ---------- detailed guns ----------
+    let hd = false, hdModels = null, index = 0;
+    const V = THREE.Vector3;
+    // side flash: two crossed planes along the barrel, and a light that flashes on the gun
+    const crossMat = new THREE.MeshBasicMaterial({ map: flashTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, side: THREE.DoubleSide });
+    const cross = new THREE.Group();
+    cross.add(new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.16).rotateX(-Math.PI / 2), crossMat));
+    cross.add(new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.16).rotateX(-Math.PI / 2).rotateZ(Math.PI / 2), crossMat));
+    const light = new THREE.PointLight(0xffb45a, 0, 1.2, 2);
+    scene.add(light);
+    const kick = { p: new V(), v: new V(), r: new V(), w: new V() }, sway = { x: 0, y: 0, vx: 0, vy: 0 };
+    const part = { slide: 9, hammer: 9, bolt: 9, cylA: 0, cylT: 0, shots: 0, reloadP: -1 };
+    const casings = [], smokes = [];
+    const casingMat = () => GS.GunsHD.materials().brass;
+    let casingGeo = null;
+    const smokeMat = new THREE.SpriteMaterial({ map: smokeTexture(), depthWrite: false, transparent: true });
+
+    function buildHD() {
+      hdModels = GS.GunsHD.build(GS.Tex.env(renderer));
+      hdModels.forEach(m => { m.g.visible = false; root.add(m.g); });
+      casingGeo = GS.GunsHD.casingGeo();
+    }
+    const set = () => (hd ? hdModels : models);
+
+    function setDetail(on) {
+      if (on && !hdModels) buildHD();
+      hd = on;
+      setWeapon(index);
+    }
+
     let cur = models[0], flashT = 0;
 
     function setWeapon(i) {
-      models.forEach((m, k) => (m.g.visible = k === i));
-      cur = models[i];
+      index = i;
+      models.forEach(m => (m.g.visible = false));
+      if (hdModels) hdModels.forEach(m => (m.g.visible = false));
+      cur = set()[i];
+      cur.g.visible = true;
       cur.g.add(flash);
       flash.position.set(0, cur.info.muzzle[0], cur.info.muzzle[1] - 0.04);
+      if (hd) { cur.g.add(cross); cross.position.set(0, cur.info.muzzle[0], cur.info.muzzle[1] - 0.08); }
+      else cross.removeFromParent();
+      part.slide = part.hammer = part.bolt = 9; part.cylA = part.cylT = 0; part.reloadP = -1;
     }
 
-    function fire() { flashT = 0.05; flash.material.rotation = Math.random() * Math.PI; }
+    // k: the gun's kick (GS.weapons[].kick)
+    function fire(k = 1) {
+      flashT = 0.05; flash.material.rotation = Math.random() * Math.PI;
+      if (!hd) return;
+      const s = Math.sqrt(k);
+      kick.v.z += 0.55 * s; kick.v.y += 0.12 * s;
+      kick.w.x += 3.2 * s; kick.w.y += (Math.random() - 0.5) * 1.2 * s; kick.w.z += (Math.random() - 0.5) * 2 * s;
+      const sc = 0.09 + Math.random() * 0.07;
+      flash.scale.setScalar(sc * 1.3);
+      cross.scale.set(1, 1, 0.7 + Math.random() * 0.6);
+      cross.rotation.z = Math.random() * Math.PI;
+      part.slide = 0; part.hammer = 0; part.bolt = 0; part.cylT += Math.PI / 3; part.shots++;
+      const info = cur.info;
+      if (info.eject && !info.bolt && part.shots % (info.ejectEvery || 1) === 0) eject(info);
+      for (let i = 0; i < 2; i++) smoke(0.15 + i * 0.1);
+    }
 
-    // s: { bob, recoil, dip, spin (0..1 minigun spin-up), loaded (RPG has a rocket) }
+    const tmpV = new V();
+    function eject(info, spread = 0) {
+      if (casings.length > 24) { const c = casings.shift(); c.m.removeFromParent(); }
+      const m = new THREE.Mesh(casingGeo, casingMat());
+      m.scale.setScalar(info.casing || 1);
+      cur.g.localToWorld(m.position.fromArray(info.eject));
+      m.position.x += (Math.random() - 0.5) * spread;
+      m.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+      scene.add(m);
+      casings.push({ m, life: 0.9, v: new V(0.9 + Math.random() * 0.5, 0.9 + Math.random() * 0.5, 0.2 + Math.random() * 0.3).multiplyScalar(spread ? 0.3 : 1), w: new V(Math.random() * 30, Math.random() * 30, 0) });
+    }
+    function smoke(life) {
+      if (smokes.length > 12) { const o = smokes.shift(); o.s.removeFromParent(); }
+      const s = new THREE.Sprite(smokeMat.clone());
+      cur.g.localToWorld(s.position.set(0, cur.info.muzzle[0], cur.info.muzzle[1] - 0.02));
+      s.scale.setScalar(0.03);
+      scene.add(s);
+      smokes.push({ s, life, max: life, v: new V((Math.random() - 0.5) * 0.06, 0.08 + Math.random() * 0.05, -0.05) });
+    }
+
+    // spring: x'' = -k x - c x'
+    function springStep(x, v, k, c, dt) {
+      v.addScaledVector(x, -k * dt).multiplyScalar(Math.max(0, 1 - c * dt));
+      x.addScaledVector(v, dt);
+    }
+
+    // s: { bob, recoil, dip, spin (0..1 minigun spin-up), loaded (gun has a round),
+    //      look: [dx, dy] mouse movement this frame, reload: 0..1 progress or -1 }
     function update(dt, s) {
       if (cur.info.spinner) cur.info.spinner.rotation.z += (s.spin || 0) * dt * 40;
       if (cur.info.round) cur.info.round.visible = s.loaded !== false;
       const hip = cur.info.hip;
-      root.position.set(
-        hip[0] + Math.cos(s.bob) * 0.008,
-        hip[1] + Math.abs(Math.sin(s.bob)) * 0.008 - s.dip * 0.12 - s.recoil * 0.005,
-        hip[2] + s.recoil * 0.035);
       const turn = cur.info.dipTurn || 1; // long guns tilt less when reloading so they don't swing into the camera
-      root.rotation.set(s.recoil * 0.1 - s.dip * 0.9 * turn, 0.05, s.dip * 0.4 * turn);
       flashT -= dt;
       flash.visible = flashT > 0;
+      if (!hd) {
+        root.position.set(
+          hip[0] + Math.cos(s.bob) * 0.008,
+          hip[1] + Math.abs(Math.sin(s.bob)) * 0.008 - s.dip * 0.12 - s.recoil * 0.005,
+          hip[2] + s.recoil * 0.035);
+        root.rotation.set(s.recoil * 0.1 - s.dip * 0.9 * turn, 0.05, s.dip * 0.4 * turn);
+        return;
+      }
+      updateHD(dt, s, hip, turn);
+    }
+
+    let breathT = 0;
+    function updateHD(dt, s, hip, turn) {
+      const info = cur.info;
+      dt = Math.min(dt, 0.033);
+      springStep(kick.p, kick.v, 260, 20, dt);
+      springStep(kick.r, kick.w, 220, 16, dt);
+      // the gun lags behind the aim and swings back
+      const look = s.look || [0, 0];
+      const tx = Math.max(-0.05, Math.min(0.05, -look[0] * 0.0006)), ty = Math.max(-0.05, Math.min(0.05, look[1] * 0.0006));
+      sway.vx += ((tx - sway.x) * 140 - sway.vx * 14) * dt; sway.x += sway.vx * dt;
+      sway.vy += ((ty - sway.y) * 140 - sway.vy * 14) * dt; sway.y += sway.vy * dt;
+      breathT += dt;
+      const breath = Math.sin(breathT * 1.6) * 0.0025;
+      // reloading: the gun is pulled in a little and rolled over so the magazine faces you
+      root.position.set(
+        hip[0] + Math.cos(s.bob) * 0.01 + sway.x * 0.4 - s.dip * 0.05,
+        hip[1] + Math.abs(Math.sin(s.bob)) * 0.01 + breath - s.dip * 0.06 + sway.y * 0.3 - kick.p.y * 0.2,
+        hip[2] + kick.p.z + s.dip * 0.04);
+      root.rotation.set(kick.r.x * 0.12 - s.dip * 0.25 * turn + sway.y + breath, 0.05 + kick.r.y * 0.1 + sway.x + s.dip * 0.3, s.dip * 0.7 * turn + kick.r.z * 0.06 - sway.x * 0.6);
+      if (info.spinner) root.position.x += (s.spin || 0) * (Math.random() - 0.5) * 0.002;
+
+      // working parts
+      part.slide += dt; part.hammer += dt; part.bolt += dt;
+      if (info.slide) {
+        const t = part.slide;
+        let f = t < 0.025 ? t / 0.025 : Math.max(0, 1 - (t - 0.025) / 0.06);
+        if (info.slide.lock && s.loaded === false && s.reload < 0.75) f = 1; // empty: slide locks back
+        info.slide.o.position.z = info.slide.travel * f;
+      }
+      if (info.cyl) {
+        part.cylA += (part.cylT - part.cylA) * Math.min(1, dt * 18);
+        info.cyl.rotation.z = part.cylA;
+      }
+      if (info.hammer) {
+        const t = part.hammer;
+        info.hammer.rotation.x = t < 0.04 ? -0.6 : -0.6 * Math.max(0, 1 - (t - 0.2) / 0.2);
+      }
+      if (info.bolt) {  // lift, pull back (casing out), push, lower
+        const t = part.bolt, o = info.bolt;
+        const ph = (a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+        const lift = ph(0.15, 0.28) - ph(0.66, 0.78), back = ph(0.3, 0.42) - ph(0.5, 0.62);
+        o.rotation.z = lift * 1.2;
+        o.position.z = 0.06 + back * 0.08;
+        if (t - dt < 0.42 && t >= 0.42) eject(info);
+      }
+      if (info.glow) {
+        const k = 0.55 + 0.45 * Math.max(0, 1 - part.slide / 0.12) + 0.08 * Math.sin(breathT * 9);
+        info.glow.forEach(m => m.material.color.setRGB(k, k * 0.3, k * 0.22));
+      }
+      // reload: the magazine drops out and a new one goes in; the RPG round slides in
+      const p = s.reload, was = part.reloadP;
+      part.reloadP = p;
+      if (info.mag) {
+        const d = p < 0 ? 0 : p < 0.15 ? 0 : p < 0.35 ? (p - 0.15) / 0.2 : p < 0.6 ? 1 : p < 0.85 ? 1 - (p - 0.6) / 0.25 : 0;
+        const dir = info.mag.dir, k = d * d * 0.25;
+        info.mag.o.position.set(info.mag.base.x + dir[0] * k, info.mag.base.y + dir[1] * k, info.mag.base.z + dir[2] * k);
+        info.mag.o.visible = d < 0.99;
+      }
+      if (info.round && p >= 0) {
+        info.round.visible = p > 0.45;
+        info.round.position.z = -0.53 - Math.max(0, 1 - (p - 0.45) / 0.35) * 0.3;
+      } else if (info.round) info.round.position.z = -0.53;
+      if (info.reloadEject && was < 0.25 && p >= 0.25) for (let i = 0; i < info.reloadEject; i++) eject({ eject: [0, 0.02, -0.05], casing: info.casing }, 0.04);
+
+      // flash light, casings, smoke
+      light.intensity = flashT > 0 ? 2.5 : 0;
+      cur.g.localToWorld(light.position.set(0, info.muzzle[0], info.muzzle[1] - 0.05));
+      cross.visible = flashT > 0;
+      for (let i = casings.length - 1; i >= 0; i--) {
+        const c = casings[i];
+        c.v.y -= 9.8 * dt;
+        c.m.position.addScaledVector(c.v, dt);
+        c.m.rotation.x += c.w.x * dt; c.m.rotation.y += c.w.y * dt;
+        if ((c.life -= dt) <= 0) { c.m.removeFromParent(); casings.splice(i, 1); }
+      }
+      for (let i = smokes.length - 1; i >= 0; i--) {
+        const o = smokes[i], k = 1 - o.life / o.max;
+        o.s.position.addScaledVector(o.v, dt);
+        o.s.scale.setScalar(0.03 + k * 0.12);
+        o.s.material.opacity = (1 - k) * 0.6;
+        if ((o.life -= dt * 0.5) <= 0) { o.s.removeFromParent(); o.s.material.dispose(); smokes.splice(i, 1); }
+      }
     }
 
     function resize(aspect) { camera.aspect = aspect; camera.updateProjectionMatrix(); }
 
-    return { scene, camera, setWeapon, fire, update, resize };
+    return { scene, camera, setWeapon, setDetail, fire, update, resize };
   }
 
   return { create };
