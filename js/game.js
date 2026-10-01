@@ -363,11 +363,10 @@
   // Graphics settings, saved between visits.
   // Guns: the original 2D sketches, simple 3D models, or detailed 3D (textured metal, wood
   // and plastic, moving parts). Monsters: simple low-poly or detailed (organic, textured).
-  // Phones start on the lighter settings.
   const GUN_STYLES = ['sketch', '3d', 'hd'], GUN_NAMES = { sketch: 'Sketch', '3d': '3D', hd: 'Detailed 3D' };
   const load = (key, ok, def) => { try { const v = localStorage.getItem(key); return ok.includes(v) ? v : def; } catch (e) { return def; } };
   const save = (key, v) => { try { localStorage.setItem(key, v); } catch (e) {} };
-  let gunStyle = load('gunStyle', GUN_STYLES, I.isTouch ? '3d' : 'hd'), style3d = true;
+  let gunStyle = load('gunStyle', GUN_STYLES, 'hd'), style3d = true;
   function setStyle(st) {
     gunStyle = st; style3d = st !== 'sketch';
     document.body.classList.toggle('style-3d', style3d);
@@ -379,7 +378,7 @@
   $('styleBtn').addEventListener('click', nextStyle);
   addEventListener('keydown', e => { if (e.code === 'KeyV' && running) nextStyle(); });
 
-  let monsterStyle = load('monsterStyle', ['simple', 'hd'], I.isTouch ? 'simple' : 'hd');
+  let monsterStyle = load('monsterStyle', ['simple', 'hd'], 'hd');
   function setMonsterStyle(st) {
     monsterStyle = st;
     horde.setDetail(st === 'hd');
