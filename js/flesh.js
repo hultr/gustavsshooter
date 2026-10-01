@@ -82,13 +82,13 @@ GS.Flesh = (function () {
   }
 
   // ---------- bake ----------
-  // prims: [{ sdf, world, bone, color (THREE.Color or null), k }]
+  // prims: [{ sdf, world, bone, color (THREE.Color or null), k, smooth (bare skin: little texture) }]
   // carves: [{ sdf, world, k, mouth }]
   // o: { voxel, noise: { amp, fx, fy } }
   // Returns a BufferGeometry with position, normal, color, skinIndex, skinWeight.
   function bake(primsIn, carvesIn, o) {
     const v = o.voxel, minR = v * 1.2;
-    const prims = primsIn.map(p => prim(p.sdf, p.world, { bone: p.bone, color: p.color, k: p.k }));
+    const prims = primsIn.map(p => prim(p.sdf, p.world, { bone: p.bone, color: p.color, k: p.k, smooth: p.smooth }));
     // blend radius: thick parts melt together more than thin ones
     prims.forEach(p => { if (!p.k) p.k = Math.max(0.04, Math.min(0.12, p.size * 0.9)); });
     const carves = carvesIn.map(c => prim(c.sdf, c.world, { k: c.k, mouth: c.mouth }));
@@ -169,8 +169,9 @@ GS.Flesh = (function () {
         if (c0 < 0 || c1 < 0 || c2 < 0 || c3 < 0) continue;
         // wind the quad so it faces out (towards the positive side of the field)
         const out = f0 < 0 ? 1 : -1;
-        const e1 = [pos[c1 * 3] - pos[c0 * 3], pos[c1 * 3 + 1] - pos[c0 * 3 + 1], pos[c1 * 3 + 2] - pos[c0 * 3 + 2]];
-        const e2 = [pos[c2 * 3] - pos[c0 * 3], pos[c2 * 3 + 1] - pos[c0 * 3 + 1], pos[c2 * 3 + 2] - pos[c0 * 3 + 2]];
+        // quad normal from its diagonals (robust even when the quad is skewed)
+        const e1 = [pos[c2 * 3] - pos[c0 * 3], pos[c2 * 3 + 1] - pos[c0 * 3 + 1], pos[c2 * 3 + 2] - pos[c0 * 3 + 2]];
+        const e2 = [pos[c3 * 3] - pos[c1 * 3], pos[c3 * 3 + 1] - pos[c1 * 3 + 1], pos[c3 * 3 + 2] - pos[c1 * 3 + 2]];
         const nrm = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
         if ((nrm[0] * d[0] + nrm[1] * d[1] + nrm[2] * d[2]) * out > 0) idx.push(c0, c1, c2, c0, c2, c3);
         else idx.push(c0, c2, c1, c0, c3, c2);
@@ -195,10 +196,10 @@ GS.Flesh = (function () {
     }
 
     // ---------- skin weights and paint ----------
-    const SI = new Uint16Array(nv * 4), SW = new Float32Array(nv * 4), COL = new Float32Array(nv * 3);
+    const SI = new Uint16Array(nv * 4), SW = new Float32Array(nv * 4), COL = new Float32Array(nv * 3), TEX = new Float32Array(nv);
     const nb = Math.max(...prims.map(p => p.bone)) + 1, bw = new Float32Array(nb);
     const gum = new THREE.Color(0x3a0d12), c = new THREE.Color();
-    const ds = new Float32Array(prims.length);
+    const ds = new Float32Array(prims.length), sharp = Math.max(0.004, v * 0.6); // colour edges follow the resolution
     for (let n = 0; n < nv; n++) {
       const x = P[n * 3], y = P[n * 3 + 1], z = P[n * 3 + 2];
       let dmin = Infinity, dminC = Infinity;
@@ -207,12 +208,12 @@ GS.Flesh = (function () {
         if (prims[i].color) dminC = Math.min(dminC, ds[i]);
       }
       bw.fill(0);
-      let cr = 0, cg = 0, cb = 0, cw = 0;
+      let cr = 0, cg = 0, cb = 0, cw = 0, tx = 0;
       for (let i = 0; i < prims.length; i++) {
         const p = prims[i], e = ds[i] - dmin;
         if (e > 0.25 && ds[i] - dminC > 0.1) continue;
         bw[p.bone] += Math.exp(-e / 0.035);
-        if (p.color) { const w = Math.exp(-(ds[i] - dminC) / 0.012); cr += p.color.r * w; cg += p.color.g * w; cb += p.color.b * w; cw += w; }
+        if (p.color) { const w = Math.exp(-(ds[i] - dminC) / sharp); cr += p.color.r * w; cg += p.color.g * w; cb += p.color.b * w; cw += w; tx += (p.smooth ? 0.2 : 1) * w; }
       }
       // four strongest bones
       let tot = 0;
@@ -232,9 +233,10 @@ GS.Flesh = (function () {
       k *= Math.max(0.3, 1 - occ * 0.45);
       for (const cv of carves) {
         if (!cv.mouth) continue;
-        const m = Math.max(0, 1 - Math.abs(dist(cv, x, y, z)) / 0.03);
+        const m = Math.max(0, Math.min(1, (0.008 - dist(cv, x, y, z)) / 0.008)); // only inside the mouth
         if (m > 0) c.lerp(gum, m);
       }
+      TEX[n] = cw ? tx / cw : 1;
       COL[n * 3] = c.r * k; COL[n * 3 + 1] = c.g * k; COL[n * 3 + 2] = c.b * k;
     }
 
@@ -242,6 +244,7 @@ GS.Flesh = (function () {
     geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(NR, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(COL, 3));
+    geo.setAttribute('texAmt', new THREE.BufferAttribute(TEX, 1));
     geo.setAttribute('skinIndex', new THREE.BufferAttribute(SI, 4));
     geo.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4));
     geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(nv * 2), 2));
@@ -256,12 +259,13 @@ GS.Flesh = (function () {
 uniform float uTexScale;
 varying vec3 vObjPos;
 varying vec3 vObjNrm;
+varying float vTexAmt;
 vec3 triW() { vec3 w = pow(abs(normalize(vObjNrm)), vec3(4.0)); return w / (w.x + w.y + w.z); }
 vec4 triSample(sampler2D t, vec3 p) { vec3 w = triW(); return texture2D(t, p.zy) * w.x + texture2D(t, p.xz) * w.y + texture2D(t, p.xy) * w.z; }
 `;
   const TRI_MAP = `
 #ifdef USE_MAP
-  diffuseColor *= triSample(map, vObjPos * uTexScale);
+  diffuseColor *= mix(vec4(1.0), triSample(map, vObjPos * uTexScale), vTexAmt);
 #endif
 `;
   const TRI_BUMP = `
@@ -272,7 +276,7 @@ vec4 triSample(sampler2D t, vec3 p) { vec3 w = triW(); return texture2D(t, p.zy)
   vec2 dHdxy_fwd() {
     vec3 dx = dFdx(vObjPos), dy = dFdy(vObjPos);
     float h = triH(vObjPos);
-    return bumpScale * vec2(triH(vObjPos + dx) - h, triH(vObjPos + dy) - h);
+    return bumpScale * vTexAmt * vec2(triH(vObjPos + dx) - h, triH(vObjPos + dy) - h);
   }
   vec3 perturbNormalArb( vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection ) {
     vec3 vSigmaX = dFdx( surf_pos.xyz );
@@ -291,8 +295,8 @@ vec4 triSample(sampler2D t, vec3 p) { vec3 w = triW(); return texture2D(t, p.zy)
     const m = new THREE.MeshPhongMaterial({ vertexColors: true, map: o.map, bumpMap: o.bump, bumpScale: o.bumpScale, shininess: o.shininess, specular: o.specular });
     m.onBeforeCompile = sh => {
       sh.uniforms.uTexScale = { value: 1 / (o.tile || 0.3) };
-      sh.vertexShader = 'varying vec3 vObjPos;\nvarying vec3 vObjNrm;\n' +
-        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vObjPos = position;\n  vObjNrm = normal;');
+      sh.vertexShader = 'attribute float texAmt;\nvarying float vTexAmt;\nvarying vec3 vObjPos;\nvarying vec3 vObjNrm;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vObjPos = position;\n  vObjNrm = normal;\n  vTexAmt = texAmt;');
       sh.fragmentShader = TRI + sh.fragmentShader
         .replace('#include <map_fragment>', TRI_MAP)
         .replace('#include <bumpmap_pars_fragment>', TRI_BUMP)

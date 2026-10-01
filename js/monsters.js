@@ -10,6 +10,9 @@
 //   7  runners        – Löparen (spiky hair, long arms), Bok (hairy with a big claw)
 // From sketches/monstersandweapons2.png:
 //      Gob            – its own family: head full of teeth, curved blade on one arm
+// Bartek family: spiders and snakes with a human-like head (hair with a side parting,
+// thick brows, a mustache and a wide grin), modelled from shapes only:
+//      Spindelbartek  – a spider; Ormbartek – a rearing snake
 window.GS = window.GS || {};
 
 GS.Monsters = (function () {
@@ -53,6 +56,7 @@ GS.Monsters = (function () {
   const C = {
     bone: 0xe6dfcc, blade: 0x2a2a30, dark: 0x3b302a, mouth: 0x2a1212, ink: 0x1c1c1c, white: 0xf7f4ea,
     bark: 0x94805f, moss: 0x9fae80, gob: 0xcfc9bd, tooth: 0xfffbe8, slime: 0xc4d68f, pink: 0xe6bca8, grey: 0xb4a9c8, rust: 0xcf9f72,
+    skin: 0xe2b59a, hair: 0x3b2a1e, spider: 0x4a3b30, scale: 0x7d8a45,
   };
   const PI = Math.PI;
   const NOT_FLESH = [C.mouth, C.white, C.tooth];
@@ -67,6 +71,8 @@ GS.Monsters = (function () {
     [C.dark]: ['chitin', 50, 0x444444, 0.03, 0x3b302a], [C.mouth]: ['gum', 60, 0x442222, 0.02, 0x1c0609],
     [C.tooth]: ['enamel', 90, 0x999988, 0.01, 0xf2ead0], [C.white]: ['enamel', 90, 0x999988, 0.01, 0xf2ead0],
     bone: ['enamel', 30, 0x555550, 0.02, 0xd8cfb4],
+    [C.skin]: ['flesh', 30, 0x443333, 0.03, 0xd8a589], [C.hair]: ['fur', 4, 0x111111, 0.06, 0x38261a],
+    [C.spider]: ['fur', 5, 0x111111, 0.07, 0x3d3128], [C.scale]: ['leather', 40, 0x445533, 0.05, 0x6f7d3c],
   };
   const skin = c => once('hd' + c, () => {
     const [kind, shininess, specular, bumpScale, color] = SKINS[c] || ['flesh', 20, 0x333333, 0.03, c];
@@ -536,6 +542,80 @@ GS.Monsters = (function () {
     return R;
   }
 
+  // ---------- Bartek family ----------
+  // The head (front +z, radius about 0.28 * k): a round face, dark hair with a fringe swept
+  // to one side, thick brows, broad nose, ears, a thin mustache and a wide grin.
+  function bartekHead(R, head, k = 1) {
+    const q = a => a.map(v => v * k);
+    part(R, head, ball(0.28 * k), C.skin, { s: [0.95, 1.1, 0.95], head: true });
+    part(R, head, ball(0.2 * k), C.skin, { p: q([0, -0.12, 0.06]), s: [1.2, 0.8, 1], head: true });          // full cheeks
+    part(R, head, ball(0.29 * k), C.hair, { p: q([0, 0.14, -0.06]), s: [1.03, 0.7, 1.0], head: true });      // hair, hairline high on the forehead
+    part(R, head, ball(0.14 * k), C.hair, { p: q([0.06, 0.25, 0.15]), s: [1.6, 0.55, 0.8], r: [0, 0, -0.2], head: true, k: 0.03 }); // fringe
+    for (const sd of [-1, 1]) {
+      part(R, head, ball(0.06 * k), C.skin, { p: q([sd * 0.265, -0.02, 0]), s: [0.5, 1, 0.8], head: true, k: 0.02 });  // ears
+      part(R, head, box(0.11 * k, 0.025 * k, 0.03 * k), C.hair, { p: q([sd * 0.09, 0.1, 0.255]), r: [0, 0, -sd * 0.12], head: true, k: 0.012 }); // brows
+    }
+    part(R, head, ball(0.055 * k), C.skin, { p: q([0, -0.04, 0.275]), s: [1, 0.95, 1], head: true, k: 0.02 }); // nose
+    eyes(R, head, 0.04 * k, 0.245 * k, 0.09 * k, 0.034 * k);
+    part(R, head, ball(0.08 * k), C.hair, { p: q([0, -0.105, 0.275]), s: [1.15, 0.22, 0.4], head: true, k: 0.01 }); // mustache
+    if (HD) maw(R, head, 0, -0.165 * k, 0.24 * k, 0.17 * k, 0.07 * k, 8);                                        // the grin
+    else {
+      part(R, head, arc(0.09 * k), C.ink, { p: q([0, -0.15, 0.26]), glow: true, head: true });
+      part(R, head, box(0.12 * k, 0.025 * k, 0.02 * k), C.white, { p: q([0, -0.16, 0.255]), glow: true, head: true });
+    }
+  }
+
+  // Spindelbartek: a hairy spider body, eight jointed legs in an alternating gait, the head
+  // in front with two extra little spider eyes and fangs under the chin
+  function spiderBartek() {
+    const R = rig(), b = R.body, col = C.spider;
+    part(R, b, ball(0.3), col, { p: [0, 0.5, 0.15], s: [1, 0.75, 1.1] });     // thorax
+    part(R, b, ball(0.5), col, { p: [0, 0.68, -0.55], s: [0.95, 0.8, 1.25] }); // abdomen
+    for (const sd of [-1, 1]) for (let i = 0; i < 4; i++) {
+      const a = -0.7 + i * 0.47;
+      const yaw = joint(b, [sd * 0.2, 0.48, 0.3 - i * 0.15], [0, sd > 0 ? a : PI - a, 0]);
+      const hip = joint(yaw, [0, 0, 0]);
+      const femur = joint(hip, [0, 0, 0], [0, 0, PI / 2 + 0.6]);
+      part(R, femur, limb(0.06, 0.05, 0.7), col);
+      const tibia = joint(femur, [0, -0.7, 0], [0, 0, -1.5]);
+      part(R, tibia, limb(0.05, 0.025, 1.0), col);
+      part(R, tibia, spike(0.025, 0.12), C.ink, { p: [0, -1.0, 0], r: [PI, 0, 0] });
+      const ph = ((i + (sd > 0 ? 0 : 1)) % 2) * PI;
+      swing(R, hip, 0.3, ph, 'y');
+      swing(R, femur, 0.25, ph + PI / 2, 'z');   // the foot lifts while it moves forward
+    }
+    const head = look(R, joint(b, [0, 0.72, 0.55]));
+    bartekHead(R, head);
+    for (const sd of [-1, 1]) {
+      eye(R, head, sd * 0.05, 0.19, 0.255, 0.02, true);
+      const fang = joint(head, [sd * 0.07, -0.24, 0.12]);
+      part(R, fang, spike(0.035, 0.22), C.ink, { r: [PI - 0.3, 0, 0] });
+      arm(R, fang, 0, 0.3);
+    }
+    return R;
+  }
+
+  // Ormbartek: a snake rearing up with a hood behind the head; the tail slithers in a wave
+  function snakeBartek() {
+    const R = rig(), b = R.body, col = C.scale;
+    part(R, b, ball(0.22), col, { p: [0, 0.2, 0], s: [1.1, 0.8, 1.1] });
+    let seg = joint(b, [0, 0.17, -0.05], [PI / 2, 0, 0]), r = 0.17;
+    for (let i = 0; i < 7; i++) {
+      part(R, seg, limb(r, r * 0.9, 0.38), col);
+      swing(R, seg, 0.35, -i * 0.9, 'z', { wave: true });
+      seg = joint(seg, [0, -0.38, 0]);
+      r *= 0.86;
+    }
+    part(R, seg, spike(r, 0.25), C.ink, { r: [PI, 0, 0] });
+    const neck = joint(b, [0, 0.25, 0.08], [PI + 0.35, 0, 0]);
+    part(R, neck, limb(0.17, 0.14, 0.95), col);
+    part(R, neck, ball(0.3), col, { p: [0, -0.56, 0.17], s: [1.0, 0.85, 0.25] });   // hood (local +z is behind the head here)
+    arm(R, neck, 0, 0.25);  // rears back and strikes
+    const head = look(R, joint(neck, [0, -0.95, 0], [-(PI + 0.35), 0, 0]));
+    bartekHead(R, head, 0.9);
+    return R;
+  }
+
   // ---------- Species table ----------
   // speed m/s and attack rate are multiplied by the difficulty, which grows over time.
   // from: seconds into the fight before it starts showing up.
@@ -555,16 +635,18 @@ GS.Monsters = (function () {
     { id: 'tangle', name: 'Trassel', family: 2, build: tangle, hp: 80, speed: 3.2, dmg: 2, r: 0.6, h: 2.8, move: 'walk', from: 75, weight: 2, score: 20 },
     { id: 'leaper', name: 'Hopparen', family: 5, build: leaper, hp: 70, speed: 6, dmg: 2, r: 0.6, h: 2.3, move: 'hop', jump: 6, from: 90, weight: 2, score: 25 },
     { id: 'dhi', name: 'Dhi', family: 2, build: dhi, hp: 35, speed: 3.8, dmg: 1, r: 0.6, h: 0.8, move: 'fly', from: 105, weight: 2, score: 20 },
+    { id: 'spider', name: 'Spindelbartek', family: 'Bartek', build: spiderBartek, hp: 70, speed: 4.2, dmg: 1, r: 0.9, h: 1.3, move: 'walk', stride: 0.45, from: 50, weight: 2, score: 25, iris: 0x6b3e1f, fineHead: true },
+    { id: 'snake', name: 'Ormbartek', family: 'Bartek', build: snakeBartek, hp: 90, speed: 3.4, dmg: 2, r: 0.6, h: 1.5, move: 'walk', stride: 0.6, from: 80, weight: 2, score: 30, iris: 0x6b3e1f, fineHead: true },
     { id: 'frot', name: 'Frot', family: 2, build: frot, hp: 300, speed: 1.8, dmg: 3, r: 1.0, h: 4.4, move: 'walk', lean: 0.6, from: 120, weight: 1, score: 60 },
   ];
 
-  // Blood colour per family, never red: purple, poison green, yellow, blue, orange, teal.
-  // Detailed eyes get the same colour in the iris.
-  const BLOOD = { 1: 0x8b45d6, 2: 0x5ee02c, 3: 0xe8c81e, 5: 0x2f7ff0, 7: 0xff8c1a, Gob: 0x1fcab4 };
+  // Blood colour per family, never red: purple, poison green, yellow, blue, orange, teal,
+  // magenta. Detailed eyes get the same colour in the iris unless the species has its own.
+  const BLOOD = { 1: 0x8b45d6, 2: 0x5ee02c, 3: 0xe8c81e, 5: 0x2f7ff0, 7: 0xff8c1a, Gob: 0x1fcab4, Bartek: 0xe040c0 };
   SPECIES.forEach(s => { s.blood = BLOOD[s.family]; });
 
   function build(sp, hd) {
-    HD = hd; IRIS = sp.blood;
+    HD = hd; IRIS = sp.iris || sp.blood;
     try {
       const R = sp.build();
       if (hd) addFlesh(R, sp);
@@ -580,7 +662,7 @@ GS.Monsters = (function () {
   const NOISE = { bark: { amp: 0.014, fx: 7, fy: 1.8 }, leather: { amp: 0.008, fx: 11, fy: 11 }, fur: { amp: 0.005, fx: 22, fy: 22 } };
   // Voxel size from the rough skin area, so every monster ends up with about 12k triangles
   // (surface nets make ~2 triangles per voxel face on the surface)
-  function voxelFor(prims) {
+  function voxelFor(prims, tris = 12000, min = 0.014) {
     let area = 0;
     for (const p of prims) {
       const d = p.sdf, s = p.obj.getWorldScale(new THREE.Vector3());
@@ -588,36 +670,48 @@ GS.Monsters = (function () {
       else if (d.type === 'ellip') area += 4 * PI * ((d.r[0] * s.x * d.r[1] * s.y + d.r[1] * s.y * d.r[2] * s.z + d.r[0] * s.x * d.r[2] * s.z) / 3);
       else area += 8 * (d.h[0] * d.h[1] + d.h[1] * d.h[2] + d.h[0] * d.h[2]);
     }
-    return Math.max(0.014, Math.min(0.045, Math.sqrt(area * 1.25 * 2 / 12000)));
+    return Math.max(min, Math.min(0.045, Math.sqrt(area * 1.25 * 2 / tris)));
   }
+  // Species with a detailed face (sp.fineHead) get the head as a second, finer mesh, so a
+  // nose, brows and a mustache a few centimetres big still show.
   function addFlesh(R, sp) {
     R.root.updateMatrixWorld(true);
     const bones = [];
     R.root.traverse(o => { if (o.isBone) bones.push(o); });
     const boneOf = o => { while (o && !o.isBone) o = o.parent; return Math.max(0, bones.indexOf(o)); };
-    // the biggest part decides the skin texture
-    const vol = p => { const d = p.sdf; return d.type === 'cone' ? Math.hypot(...d.b.map((v, i) => v - d.a[i])) * Math.max(d.r0, d.r1) ** 2 : d.type === 'ellip' ? d.r[0] * d.r[1] * d.r[2] : d.h[0] * d.h[1] * d.h[2]; };
-    const main = R.prims.reduce((a, p) => (p.color && vol(p) > vol(a) ? p : a), R.prims[0]).color;
-    const kind = (SKINS[main] || SKINS[C.bone])[0];
-    if (!fleshGeo[sp.id]) {
-      fleshGeo[sp.id] = GS.Flesh.bake(
-        R.prims.map(p => ({ sdf: p.sdf, world: p.obj.matrixWorld.clone(), bone: boneOf(p.obj), color: p.color === null ? null : hdColor(p.color), k: p.k })),
-        R.carves.map(c => ({ sdf: c.sdf, world: c.obj.matrixWorld.clone(), k: c.k, mouth: c.mouth })),
-        { voxel: voxelFor(R.prims), noise: NOISE[kind] });
+    const inHead = o => { for (; o; o = o.parent) if (o === R.head) return true; return false; };
+    const split = sp.fineHead && R.head;
+    const groups = split
+      ? [['', R.prims.filter(p => !inHead(p.obj)), R.carves.filter(c => !inHead(c.obj)), 12000, 0.014],
+         ['head', R.prims.filter(p => inHead(p.obj)), R.carves.filter(c => inHead(c.obj)), 14000, 0.006]]
+      : [['', R.prims, R.carves, 12000, 0.014]];
+    const skeleton = new THREE.Skeleton(bones);
+    for (const [part, prims, carves, tris, min] of groups) {
+      // the biggest part decides the skin texture
+      const vol = p => { const d = p.sdf; return d.type === 'cone' ? Math.hypot(...d.b.map((v, i) => v - d.a[i])) * Math.max(d.r0, d.r1) ** 2 : d.type === 'ellip' ? d.r[0] * d.r[1] * d.r[2] : d.h[0] * d.h[1] * d.h[2]; };
+      const main = prims.reduce((a, p) => (p.color && vol(p) > vol(a) ? p : a), prims[0]).color;
+      const kind = (SKINS[main] || SKINS[C.bone])[0];
+      const key = sp.id + part;
+      if (!fleshGeo[key]) {
+        fleshGeo[key] = GS.Flesh.bake(
+          prims.map(p => ({ sdf: p.sdf, world: p.obj.matrixWorld.clone(), bone: boneOf(p.obj), color: p.color === null ? null : hdColor(p.color), k: p.k, smooth: p.color === C.skin })),
+          carves.map(c => ({ sdf: c.sdf, world: c.obj.matrixWorld.clone(), k: c.k, mouth: c.mouth })),
+          { voxel: voxelFor(prims, tris, min), noise: NOISE[kind] });
+      }
+      if (!fleshMat[kind]) {
+        const [, shininess, specular, bump] = SKINS[main] || SKINS[C.bone], t = GS.Tex.skin(kind);
+        fleshMat[kind] = GS.Flesh.material({ map: t.map, bump: t.bump, bumpScale: bump * 0.25, shininess, specular, tile: kind === 'fur' ? 0.18 : 0.3 });
+      }
+      const mesh = new THREE.SkinnedMesh(fleshGeo[key], fleshMat[kind]);
+      mesh.frustumCulled = false;
+      R.root.add(mesh);
+      mesh.bind(skeleton);
+      R.flash.push(mesh);
     }
-    if (!fleshMat[kind]) {
-      const [, shininess, specular, bump] = SKINS[main] || SKINS[C.bone], t = GS.Tex.skin(kind);
-      fleshMat[kind] = GS.Flesh.material({ map: t.map, bump: t.bump, bumpScale: bump * 0.25, shininess, specular, tile: kind === 'fur' ? 0.18 : 0.3 });
-    }
-    const mesh = new THREE.SkinnedMesh(fleshGeo[sp.id], fleshMat[kind]);
-    mesh.frustumCulled = false;
-    R.root.add(mesh);
-    mesh.bind(new THREE.Skeleton(bones));
-    R.flash.push(mesh);
   }
   // Bake the detailed species one at a time in the background, so they don't stall the game
   function prebake() {
-    const todo = SPECIES.filter(s => !fleshGeo[s.id]);
+    const todo = SPECIES.filter(s => !fleshGeo[s.id]);  // (the head mesh is baked together with the body)
     const next = () => { const sp = todo.shift(); if (!sp) return; if (!fleshGeo[sp.id]) build(sp, true); setTimeout(next, 30); };
     setTimeout(next, 30);
   }

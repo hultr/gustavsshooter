@@ -30,6 +30,9 @@
       nets), carved mouths/eye sockets, fangs, talons, wet eyes, lifelike motion.
 - [x] Detailed guns: metal/wood/plastic textures, moving parts, casings, recoil and sway.
 - [x] Blood colour per family (no red).
+- [x] Bartek family: Spindelbartek and Ormbartek, faces after a private reference picture
+      (not in git, not used as a texture). Detailed heads are baked as a finer second mesh.
+- [x] Scoreboard (local, or online once `js/scores-config.js` is filled in).
 - [x] Monsters reshaped from the high-res photo `sketches/monstershires.jpg`.
 - [x] Played with mouse and keyboard: works.
 - [x] Sketch numbers confirmed: the red ones are 5 and 7. Gob is its own family.

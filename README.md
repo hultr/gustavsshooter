@@ -7,7 +7,7 @@ Pick a map in the menu:
 - **Monster attack** – Gustav's monsters (`sketches/monsters.png`) come out of the cave at the
   end of the valley. Slow at first, then faster every wave (30 s). Survive as long as you can.
   Headshots do double damage, family 2 is poisonous. Every family bleeds its own colour
-  (purple, green, yellow, blue, orange, teal – never red).
+  (purple, green, yellow, blue, orange, teal, magenta – never red).
   You heal half a heart at a time after a while without getting hit.
   The menu has a **Monster speed** slider (40–160 %), and every monster gets its own
   random pace, so some are quicker than others.
@@ -15,7 +15,10 @@ Pick a map in the menu:
 Monster families (same number on the sketch = same family):
 1 blade stalkers Fob, Bob, Olt · 2 root things Frot, Trassel, Dhi (flies, poisonous) ·
 3 crawlers Bek, Durk, Dir · 5 Hopparen · 7 runners Löparen, Bok ·
-and Gob (head full of teeth, its own family) from `sketches/monstersandweapons2.png`.
+Gob (head full of teeth, its own family) from `sketches/monstersandweapons2.png` ·
+Bartek: Spindelbartek (a spider) and Ormbartek (a rearing snake) with a human-like head –
+hair with a side parting, thick brows, a mustache and a wide grin – modelled from shapes only.
+The reference picture `sketches/bartek.png` is private and ignored by git.
 
 Weapons 1–5 are from `sketches/weapons.png`; 6–9 from `sketches/monstersandweapons2.png`:
 Nyckel sniper (goes through monsters), AR laser, RPG (explodes), Minigun (spins up, heavy).
