@@ -50,18 +50,24 @@
       <button id="startBtn" class="big">START</button>
       <button id="resumeBtn" class="big" hidden>RESUME</button>
     </div>
-    <button id="styleBtn" class="toggle">Gun style: 3D</button>
+    <div id="gfxPick">
+      <button id="styleBtn" class="toggle">Guns: 3D</button>
+      <button id="monsterStyleBtn" class="toggle">Monsters: Simple</button>
+    </div>
     <label id="speedPick" class="monsters-only">Monster speed: <b id="speedVal">100%</b>
       <input id="speedRange" type="range" min="40" max="160" step="10" value="100"></label>
-    <p class="help desktop-only">WASD move · Mouse aim · Click shoot · Right-click zoom · R reload · 1–9 / wheel change gun · Space jump · Shift run · V gun style · Esc/P menu</p>
+    <p class="help desktop-only">WASD move · Mouse aim · Click shoot · Right-click zoom · R reload · 1–9 / wheel change gun · Space jump · Shift run · V gun graphics · Esc/P menu</p>
     <p class="help touch-only">Left thumb: move · Right thumb: aim · Buttons: fire, reload, zoom, gun</p>
   </div>
 </div>
 
 <script src="vendor/three.min.js"></script>
 <script src="js/sketch.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/textures.js"></script>
 <script src="js/weapons.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/guns-hd.js"></script>
 <script src="js/viewmodel.js"></script>
 <script src="js/world.js"></script>
 <script src="js/arena.js"></script>

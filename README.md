@@ -6,7 +6,8 @@ Pick a map in the menu:
 - **Training range** – shoot targets for 3 minutes.
 - **Monster attack** – Gustav's monsters (`sketches/monsters.png`) come out of the cave at the
   end of the valley. Slow at first, then faster every wave (30 s). Survive as long as you can.
-  Headshots do double damage, monsters bleed green, family 2 is poisonous.
+  Headshots do double damage, family 2 is poisonous. Every family bleeds its own colour
+  (purple, green, yellow, blue, orange, teal – never red).
   You heal half a heart at a time after a while without getting hit.
   The menu has a **Monster speed** slider (40–160 %), and every monster gets its own
   random pace, so some are quicker than others.
@@ -31,7 +32,20 @@ Nyckel sniper (goes through monsters), AR laser, RPG (explodes), Minigun (spins 
 ## Controls
 
 Desktop: WASD move · mouse aim · click shoot · right-click zoom (sniper) · R reload ·
-1–9 / mouse wheel switch gun · Space jump · Shift run · V toggle 3D/sketch guns · Esc/P menu.
+1–9 / mouse wheel switch gun · Space jump · Shift run · V switch gun graphics · Esc/P menu.
+
+## Graphics
+
+Two buttons in the menu, saved between visits:
+
+- **Guns: Sketch / 3D / Detailed 3D** – Gustav's 2D drawings, simple 3D models, or detailed
+  models with textured metal, wood and plastic, gloved hands, spring recoil and sway, working
+  slides/bolts/revolver cylinder, flying casings and magazine changes.
+- **Monsters: Simple / Detailed** – low-poly with ink outlines, or organic bodies with textured
+  skin, wet eyes, fangs and talons, and more lifelike motion: knees bend, heads follow you,
+  jaws snap, they flinch when hit and collapse when they die.
+
+Phones start on 3D guns and simple monsters; desktop on the detailed ones.
 
 Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoom/jump/gun.
 
@@ -41,10 +55,13 @@ Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoo
 |------|------|
 | `js/world.js` | Training range: layout, crates, targets |
 | `js/arena.js` | Monster valley map |
-| `js/monsters.js` | Monster models, movement, path finding, difficulty |
-| `js/blood.js` | Green blood drops and splats |
+| `js/monsters.js` | Monster models (both detail levels), movement, path finding, difficulty |
+| `js/blood.js` | Blood drops, splats and pools, coloured per family |
 | `js/weapons.js` | Gun stats + drawings (from `sketches/weapons.png`) |
-| `js/viewmodel.js` | 3D guns + hands (first-person view) |
+| `js/viewmodel.js` | 3D guns + hands (first-person view), detailed gun motion |
+| `js/guns-hd.js` | Detailed 3D guns and gloved hands |
+| `js/geo.js` | Noise and shape helpers: muscled limbs, horns, claws, beveled profiles |
+| `js/textures.js` | Textures drawn in code: skins, metal, wood, plastic, reflections |
 | `js/sketch.js` | Pencil-style drawing helpers |
 | `js/game.js` | Player, shooting, round timer, HUD, menus |
 | `js/input.js` | Keyboard/mouse + touch controls |

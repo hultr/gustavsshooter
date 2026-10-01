@@ -26,7 +26,7 @@
   let world = maps[mapId];
   // Each monster is ~30-60 draw calls, so phones get fewer at once
   const horde = GS.Monsters.create(maps.monsters, { onPlayerHit: playerHit, cap: I.isTouch ? 16 : Infinity });
-  const vm = GS.Viewmodel.create();
+  const vm = GS.Viewmodel.create(renderer);
   renderer.autoClear = false;
 
   function resize() {
@@ -160,7 +160,7 @@
     recoil = Math.min(1.4, recoil + 0.5 * w.kick);
     recoilPitch += 0.012 * w.kick;
     flashT = 0.05;
-    vm.fire();
+    vm.fire(w.kick);
     if (w.rocket) { fireRocket(w); return finishShot(); }
 
     // Walk along everything the bullet hits; a piercing bullet goes on through monsters
@@ -356,21 +356,37 @@
       `translate(${bobX + recoil * 14}px, ${bobY + recoil * 18 + dip * 120}px) rotate(${12 - recoil * 7 + dip * 25}deg) scaleX(-1)`;
     flashT -= dt;
     flash.style.opacity = flashT > 0 ? 1 : 0;
-    vm.update(dt, { bob: player.bob, recoil, dip, spin, loaded: ammo[current] > 0 });
+    vm.update(dt, { bob: player.bob, recoil, dip, spin, loaded: ammo[current] > 0,
+      look: [I.lookX, I.lookY], reload: reloadT > 0 ? (w.reload - reloadT) / w.reload : -1 });
   }
 
-  // Gun style: 3D models with hands, or the original 2D sketches
-  let style3d = true;
-  try { style3d = localStorage.getItem('gunStyle') !== 'sketch'; } catch (e) {}
-  function setStyle(on) {
-    style3d = on;
-    document.body.classList.toggle('style-3d', on);
-    $('styleBtn').textContent = 'Gun style: ' + (on ? '3D' : 'Sketch');
-    try { localStorage.setItem('gunStyle', on ? '3d' : 'sketch'); } catch (e) {}
+  // Graphics settings, saved between visits.
+  // Guns: the original 2D sketches, simple 3D models, or detailed 3D (textured metal, wood
+  // and plastic, moving parts). Monsters: simple low-poly or detailed (organic, textured).
+  // Phones start on the lighter settings.
+  const GUN_STYLES = ['sketch', '3d', 'hd'], GUN_NAMES = { sketch: 'Sketch', '3d': '3D', hd: 'Detailed 3D' };
+  const load = (key, ok, def) => { try { const v = localStorage.getItem(key); return ok.includes(v) ? v : def; } catch (e) { return def; } };
+  const save = (key, v) => { try { localStorage.setItem(key, v); } catch (e) {} };
+  let gunStyle = load('gunStyle', GUN_STYLES, I.isTouch ? '3d' : 'hd'), style3d = true;
+  function setStyle(st) {
+    gunStyle = st; style3d = st !== 'sketch';
+    document.body.classList.toggle('style-3d', style3d);
+    if (style3d) vm.setDetail(st === 'hd');
+    $('styleBtn').textContent = 'Guns: ' + GUN_NAMES[st];
+    save('gunStyle', st);
   }
-  setStyle(style3d);
-  $('styleBtn').addEventListener('click', () => setStyle(!style3d));
-  addEventListener('keydown', e => { if (e.code === 'KeyV' && running) setStyle(!style3d); });
+  const nextStyle = () => setStyle(GUN_STYLES[(GUN_STYLES.indexOf(gunStyle) + 1) % GUN_STYLES.length]);
+  $('styleBtn').addEventListener('click', nextStyle);
+  addEventListener('keydown', e => { if (e.code === 'KeyV' && running) nextStyle(); });
+
+  let monsterStyle = load('monsterStyle', ['simple', 'hd'], I.isTouch ? 'simple' : 'hd');
+  function setMonsterStyle(st) {
+    monsterStyle = st;
+    horde.setDetail(st === 'hd');
+    $('monsterStyleBtn').textContent = 'Monsters: ' + (st === 'hd' ? 'Detailed' : 'Simple');
+    save('monsterStyle', st);
+  }
+  $('monsterStyleBtn').addEventListener('click', () => setMonsterStyle(monsterStyle === 'hd' ? 'simple' : 'hd'));
 
   function updateAmmo() {
     const el = $('ammo');
@@ -562,6 +578,8 @@
 
   // ---------- Loop ----------
   buildWeaponBar();
+  setStyle(gunStyle);
+  setMonsterStyle(monsterStyle);
   setMap(mapId);
 
   let last = performance.now(), time = 0;

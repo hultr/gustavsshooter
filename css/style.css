@@ -121,8 +121,9 @@ button.big {
   font: inherit; font-size: 24px; font-weight: bold; padding: 8px 28px; cursor: pointer;
   background: #ffe066; border: 3px solid #2b2b2b; border-radius: 10px 5px 12px 6px; box-shadow: 3px 3px 0 #2b2b2b;
 }
+#gfxPick { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
 button.toggle {
-  font: inherit; font-size: 16px; margin-top: 14px; padding: 4px 14px; cursor: pointer;
+  font: inherit; font-size: 16px; padding: 4px 14px; cursor: pointer;
   background: #faf7ee; border: 2px solid #2b2b2b; border-radius: 8px 4px 9px 5px;
 }
 body.style-3d #gunWrap { display: none; }
