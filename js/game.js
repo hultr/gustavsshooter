@@ -7,6 +7,9 @@
   const renderer = new THREE.WebGLRenderer({ antialias: !I.isTouch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, I.isTouch ? 1.25 : 1.5));
   $('game').appendChild(renderer.domElement);
+  // sun shadows on the detailed monster valley (not on phones)
+  renderer.shadowMap.enabled = !I.isTouch;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 200);
   camera.rotation.order = 'YXZ';
 
@@ -389,6 +392,17 @@
   }
   $('monsterStyleBtn').addEventListener('click', () => setMonsterStyle(monsterStyle === 'hd' ? 'simple' : 'hd'));
 
+  // World: the monster valley's ground, cliffs and stones as outlined low-poly shapes or
+  // lifelike textured stone and earth (js/terrain.js)
+  let worldStyle = load('worldStyle', ['simple', 'hd'], 'hd');
+  function setWorldStyle(st) {
+    worldStyle = st;
+    maps.monsters.setDetail(st === 'hd', { shadows: !I.isTouch, touch: I.isTouch });
+    $('worldStyleBtn').textContent = 'World: ' + (st === 'hd' ? 'Detailed' : 'Simple');
+    save('worldStyle', st);
+  }
+  $('worldStyleBtn').addEventListener('click', () => setWorldStyle(worldStyle === 'hd' ? 'simple' : 'hd'));
+
   function updateAmmo() {
     const el = $('ammo');
     el.textContent = reloadT > 0 ? 'Reloading…' : `${weapons[current].name}  ${ammo[current]} / ${weapons[current].mag}`;
@@ -642,6 +656,7 @@
   buildWeaponBar();
   setStyle(gunStyle);
   setMonsterStyle(monsterStyle);
+  setWorldStyle(worldStyle);
   setMap(mapId);
 
   let last = performance.now(), time = 0;

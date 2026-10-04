@@ -1,5 +1,8 @@
 // Monster valley: a long valley at dusk. The monsters come out of the glowing cave at
 // the far end and walk towards the player, who starts behind a sandbag barricade.
+// Two detail levels: the simple map is outlined low-poly shapes; in the detailed one
+// (js/terrain.js) the ground, cliffs, cave, rocks, columns and platform are replaced by
+// lifelike stone and earth with sun shadows. Both use the same colliders.
 window.GS = window.GS || {};
 
 GS.Arena = (function () {
@@ -8,6 +11,11 @@ GS.Arena = (function () {
   function build() {
     const scene = new THREE.Scene();
     const colliders = [], shootables = [];
+    // simple-only objects (replaced in the detailed map) go into `low`; the rest is shared
+    const low = new THREE.Group(), lowShoot = [], shared = [];
+    let into = null;  // null: shared, low: simple only
+    scene.add(low);
+    const put = (m, shoot) => { (into || scene).add(m); if (shoot) (into ? lowShoot : shared).push(m); return m; };
     let seed = 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // same map every time
 
@@ -18,6 +26,13 @@ GS.Arena = (function () {
     const sun = new THREE.DirectionalLight(0xffc49a, 0.5);
     sun.position.set(10, 16, -20);
     scene.add(sun);
+    // shadows (detailed map): the light's box covers the whole valley
+    sun.target.position.set(0, 0, -37);
+    sun.position.copy(sun.target.position).addScaledVector(new THREE.Vector3(10, 16, -20).normalize(), 80);
+    scene.add(sun.target);
+    Object.assign(sun.shadow.camera, { left: -62, right: 62, top: 62, bottom: -62, near: 10, far: 160 });
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.03;
 
     // Ground: dark grass with pencil scribbles
     const groundTex = canvasTex(256, (g, s) => {
@@ -35,12 +50,11 @@ GS.Arena = (function () {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(52, 110), new THREE.MeshLambertMaterial({ map: groundTex }));
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = -37;
-    scene.add(ground);
-    shootables.push(ground);
+    into = low;
+    put(ground, true);
 
     function solid(m, x, z, hw, hd, top) {
-      scene.add(m);
-      shootables.push(m);
+      put(m, true);
       colliders.push({ minX: x - hw, maxX: x + hw, minZ: z - hd, maxZ: z + hd, top });
       return m;
     }
@@ -53,8 +67,7 @@ GS.Arena = (function () {
     function roof(x, y, z, w, h, d, color) {
       const m = outlined(new THREE.BoxGeometry(w, h, d), color);
       m.position.set(x, y + h / 2, z);
-      scene.add(m);
-      shootables.push(m);
+      put(m, true);
     }
 
     // Cliffs down both sides, walls at both ends
@@ -70,6 +83,7 @@ GS.Arena = (function () {
     box(-5.5, 0, -87, 1, 7, 6, 0x2e2a26);
     box(5.5, 0, -87, 1, 7, 6, 0x2e2a26);
     roof(0, 6, -87, 12, 1, 6, 0x2e2a26);
+    into = null;
     box(0, 0, -90.5, 12, 7, 1, 0x1a1a1a);
     const glowTex = canvasTex(128, (g, s) => {
       const grd = g.createRadialGradient(s / 2, s * 0.6, 4, s / 2, s * 0.6, s * 0.6);
@@ -83,18 +97,23 @@ GS.Arena = (function () {
 
     // Sandbag barricade in front of the player, with gaps the monsters come through
     [[-19, -12], [-8, -3], [3, 8], [12, 19]].forEach(([a, b]) => box((a + b) / 2, 0, -2, b - a, 1.1, 0.9, 0xb49f74));
+    into = low;
     box(0, 0, 11, 8, 1.2, 3, 0x8a7d68);          // low platform to shoot from
+    into = null;
     box(-16, 0, 5, 1.4, 1.4, 1.4, 0xd9a55c);
     box(15, 0, 6, 1.6, 1.6, 1.6, 0xd9a55c);
 
     // Rocks
-    [[-12, -22, 1.6], [9, -30, 2], [-4, -42, 1.4], [15, -52, 2.2], [-15, -58, 1.8], [5, -66, 1.5]].forEach(([x, z, s]) => {
+    const rocks = [[-12, -22, 1.6], [9, -30, 2], [-4, -42, 1.4], [15, -52, 2.2], [-15, -58, 1.8], [5, -66, 1.5]];
+    into = low;
+    rocks.forEach(([x, z, s]) => {
       const m = outlined(new THREE.DodecahedronGeometry(s, 0), 0x8b8478);
       m.position.set(x, s * 0.55, z);
       m.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
       m.scale.set(1.2, 0.8, 1);
       solid(m, x, z, s * 1.1, s * 0.9, s * 1.3);
     });
+    into = null;
 
     // Dead trees
     [[-17, -12, 6], [18, -20, 7], [-19, -40, 6.5], [19, -62, 7], [-9, -70, 6], [8, -48, 5.5]].forEach(([x, z, h]) => {
@@ -106,20 +125,23 @@ GS.Arena = (function () {
         const b = outlined(new THREE.CylinderGeometry(0.04, 0.1, len, 5), 0x5a4a3a);
         b.position.set(x - Math.sin(a) * len / 2, h * (0.55 + i * 0.15) + Math.cos(a) * len / 2, z);
         b.rotation.z = a;
-        scene.add(b);
+        put(b);
       }
     });
 
     // Broken stone pillars
-    [[-6, -16, 2.5], [6, -36, 1.2], [-2, -56, 3], [11, -72, 2]].forEach(([x, z, h]) => {
+    const pillars = [[-6, -16, 2.5], [6, -36, 1.2], [-2, -56, 3], [11, -72, 2]];
+    into = low;
+    pillars.forEach(([x, z, h]) => {
       const p = outlined(new THREE.CylinderGeometry(0.6, 0.7, h, 8), 0xbdb5a6);
       p.position.set(x, h / 2, z);
       solid(p, x, z, 0.7, 0.7, h);
       const top = outlined(new THREE.BoxGeometry(0.9, 0.3, 0.9), 0xbdb5a6);
       top.position.set(x + 0.1, h + 0.1, z);
       top.rotation.set(0.3, 0.5, 0.2);
-      scene.add(top);
+      put(top);
     });
+    into = null;
 
     // Crosses along the sides (just decoration)
     for (let i = 0; i < 8; i++) {
@@ -132,15 +154,41 @@ GS.Arena = (function () {
       g.add(v, h);
       g.position.set(x, 0, z);
       g.rotation.set(0, rnd() - 0.5, (rnd() - 0.5) * 0.3);
-      scene.add(g);
+      put(g);
     }
+    // the shared pieces (barricade, crates, trees, crosses) cast shadows on the detailed map
+    scene.traverse(o => { if (o.isMesh && !low.getObjectById(o.id) && o.material !== glowMat) o.castShadow = o.receiveShadow = true; });
+
+    // Simple or detailed stone and ground. o.shadows: the sun casts shadows (detailed only);
+    // o.touch: fewer pebbles and grass tufts
+    // The detailed valley is built in the background; the simple one shows until it's ready.
+    let hi = null, building = false, want = false, opts = {};
+    function show() {
+      const hd = want && !!hi;
+      low.visible = !hd;
+      if (hi) hi.group.visible = hd;
+      shootables.length = 0;
+      shootables.push(...shared, ...(hd ? hi.shootables : lowShoot));
+      sun.castShadow = hd && !!opts.shadows;
+      if (sun.castShadow) sun.shadow.mapSize.set(4096, 4096);
+    }
+    function setDetail(hd, o = {}) {
+      want = hd; opts = o;
+      if (hd && !hi && !building) {
+        building = true;
+        GS.Terrain.valley({ rocks, pillars, colliders, touch: o.touch }, v => { hi = v; scene.add(hi.group); building = false; show(); });
+      }
+      show();
+    }
+    show();
 
     function update(dt, time) {
       glowMat.color.setScalar(0.8 + Math.sin(time * 2) * 0.2);
+      if (hi && hi.group.visible) hi.update(time);
     }
 
     return {
-      scene, colliders, shootables, update,
+      scene, colliders, shootables, update, setDetail,
       start: { x: 0, z: 8, yaw: 0 },
       bounds: { minX: -24, maxX: 24, minZ: -90, maxZ: 16 },
       spawn: { x: 0, z: -87, w: 7, d: 3 },
