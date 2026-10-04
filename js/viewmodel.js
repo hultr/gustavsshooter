@@ -185,6 +185,38 @@ GS.Viewmodel = (function () {
       part(g, B(0.03, 0.09, 0.045), 'dark', 0, -0.07, 0.07, -0.25);
       return { muzzle: [0.02, -0.46], grip: { y: -0.065, z: 0.07, a: -0.25 }, fore: { y: -0.03, z: -0.14 }, hip: [0.16, -0.2, -0.5], spinner };
     },
+
+    // ---------- sketches/20261004_135325.jpg, sketches/candysniper.jpg ----------
+    scoperevolver(g) { // "Kikarrevolver": the revolver with a scope on top and saw teeth under the barrel
+      const info = builders.revolver(g);
+      part(g, C(0.016, 0.17), 'dark', 0, 0.095, -0.085);
+      disc(g, 0.015, 'lens', 0, 0.095, -0.171, Math.PI);
+      disc(g, 0.015, 'lens', 0, 0.095, 0.001, 0);
+      [-0.03, -0.13].forEach(z => part(g, B(0.012, 0.04, 0.014), 'dark', 0, 0.064, z));
+      for (let i = 0; i < 6; i++) part(g, new THREE.ConeGeometry(0.006, 0.014, 4).rotateX(Math.PI), 'metal', 0, 0.012, -0.085 - i * 0.022, 0, false);
+      return info;
+    },
+    candysniper(g) { // "Candy sniper": candy-cane barrel and hook stock, ring sight, star muzzle
+      // the barrel dips and rises again (as drawn); striped by alternating pieces
+      const Q = t => [(1 - t) ** 2 * -0.1 + 2 * t * (1 - t) * -0.4 + t * t * -0.68, (1 - t) ** 2 * 0.02 + 2 * t * (1 - t) * -0.03 + t * t * 0.035];
+      const stripes = (pts, r) => pts.slice(1).forEach(([z, y], i) => {
+        const [z0, y0] = pts[i];
+        limb(g, [0, y0, z0], [0, y - y0, z - z0], Math.hypot(z - z0, y - y0), r, i % 2 ? 0xe8417a : 'white');
+      });
+      stripes(Array.from({ length: 13 }, (_, i) => Q(i / 12)), 0.015);
+      const hook = [[0.1, 0.02], [0.2, 0.02]].concat(Array.from({ length: 8 }, (_, i) => {
+        const a = Math.PI / 2 - (i + 1) / 8 * Math.PI * 0.85; return [0.2 + Math.cos(a) * 0.045, -0.025 + Math.sin(a) * 0.045];
+      }));
+      stripes(hook, 0.017);
+      part(g, B(0.046, 0.055, 0.22), 0xe8417a, 0, 0.02, -0.01);
+      part(g, B(0.03, 0.014, 0.3), 'white', 0, 0.075, -0.1);
+      part(g, B(0.03, 0.05, 0.03), 'white', 0, 0.06, 0.04);
+      [-0.03, -0.17].forEach(z => part(g, B(0.008, 0.03, 0.008), 'dark', 0, 0.06, z));
+      part(g, new THREE.TorusGeometry(0.03, 0.006, 6, 16), 0xe8417a, 0, 0.115, -0.08);
+      part(g, new THREE.OctahedronGeometry(0.02), 0xf2c935, 0, 0.035, -0.69);
+      part(g, B(0.028, 0.085, 0.04), 0xe8417a, 0, -0.035, 0.07, -0.3);
+      return { muzzle: [0.035, -0.71], grip: { y: -0.035, z: 0.07, a: -0.3 }, fore: { y: -0.028, z: -0.28 }, hip: [0.17, -0.18, -0.55] };
+    },
   };
 
   function flashTexture() {

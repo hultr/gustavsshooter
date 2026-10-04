@@ -97,6 +97,7 @@
   let zoomed = false, recoil = 0, recoilPitch = 0, flashT = 0, spin = 0;
   const gunCanvas = $('gunCanvas'), flash = $('flash'), gunWrap = $('gunWrap'), hud = $('hud');
 
+  const KEY_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-'];
   function buildWeaponBar() {
     const bar = $('weaponBar');
     weapons.forEach((w, i) => {
@@ -105,7 +106,7 @@
       const c = document.createElement('canvas'); c.width = 140; c.height = 74;
       GS.drawWeapon(c, w);
       slot.append(c);
-      slot.insertAdjacentHTML('beforeend', `<span>${i + 1}</span><b>${w.price}</b>`);
+      slot.insertAdjacentHTML('beforeend', `<span>${KEY_LABELS[i]}</span><b>${w.price}</b>`);
       slot.addEventListener('mousedown', e => { e.stopPropagation(); selectWeapon(i); });
       bar.append(slot);
     });
@@ -172,7 +173,7 @@
       const m = hit.object.userData.monster;
       end = hit.point;
       if (m) {
-        if (!done.has(m)) { done.add(m); hitMonster(hit, w.damage); }
+        if (!done.has(m)) { done.add(m); hitMonster(hit, w); }
         if (w.pierce) continue;
         break;
       }
@@ -206,9 +207,10 @@
 
   const shootables = () => world === maps.monsters ? world.shootables.concat(horde.meshes) : world.shootables;
 
-  function hitMonster(hit, damage) {
-    const r = horde.damage(hit, damage, dir);
+  function hitMonster(hit, w) {
+    const r = horde.damage(hit, w.damage, dir);
     if (!r) return;
+    if (w.candy && !r.killed) horde.stick(r.m, w.candy.slow, w.candy.time);
     stats.hits++;
     showHitmarker();
     GS.Audio.hit(r.head);

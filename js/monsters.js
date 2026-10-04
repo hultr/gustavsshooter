@@ -812,7 +812,7 @@ GS.Monsters = (function () {
       scene.add(R.root);
       const m = {
         sp, R, hp: sp.hp, pos: R.root.position, vy: 0, yaw: 0, dir: new THREE.Vector2(0, 1),
-        state: 'walk', at: 0, cd: 0, stun: 0, flash: 0, dead: -1, t: 0,
+        state: 'walk', at: 0, cd: 0, stun: 0, slowT: 0, slowK: 1, flash: 0, dead: -1, t: 0,
         pace: PACE_MIN + Math.random() * (PACE_MAX - PACE_MIN),
         walk: Math.random() * 6, gait: 0, moved: 0, hopT: 0.5, hopX: 0, hopZ: 0, los: false, losT: 0,
         hd: detail, flinch: 0, lean: 0, roll: 0, yawRate: 0, twitch: 0, twitchT: 1 + Math.random() * 3, seed: Math.random() * 10,
@@ -846,7 +846,7 @@ GS.Monsters = (function () {
 
     function think(m, dt, mul, target) {
       const sp = m.sp, p = m.pos, fly = sp.move === 'fly', hop = sp.move === 'hop';
-      m.t += dt; m.cd -= dt; m.stun -= dt;
+      m.t += dt; m.cd -= dt; m.stun -= dt; m.slowT -= dt;
       const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz) || 0.001;
       const reach = sp.r + 0.9;
       const inReach = d < reach && (fly ? Math.abs(target.y + 1.3 - p.y) < 1.5 : target.y - p.y < sp.h + 0.3);
@@ -871,7 +871,7 @@ GS.Monsters = (function () {
       m.dir.normalize();
       turnTo(m, d < 4 ? Math.atan2(dx, dz) : Math.atan2(m.dir.x, m.dir.y), dt);
 
-      const s = sp.speed * mul * m.pace * moveSpeed * (m.stun > 0 ? 0 : 1);
+      const s = sp.speed * mul * m.pace * moveSpeed * (m.stun > 0 ? 0 : 1) * (m.slowT > 0 ? m.slowK : 1);
       if (fly) {
         const alt = d > 6 ? 3.2 + Math.sin(m.t * 2) * 0.4 : target.y + 1.3;
         p.y += (alt - p.y) * Math.min(1, dt * 2);
@@ -1045,6 +1045,9 @@ GS.Monsters = (function () {
       return out;
     }
 
+    // Candy sniper: sticky candy slows a monster to k of its speed for t seconds
+    function stick(m, k, t) { m.slowK = k; m.slowT = t; }
+
     function hurt(m, amount, head, point, dir) {
       m.hp -= amount;
       blood.spray(point, dir, head ? 16 : 9, m.sp.blood);
@@ -1134,7 +1137,7 @@ GS.Monsters = (function () {
       blood.reset();
     }
 
-    return { list, meshes, update, damage, blast, pushOut, reset, speedMul, setSpeed: k => { moveSpeed = k; }, setDetail };
+    return { list, meshes, update, damage, blast, stick, pushOut, reset, speedMul, setSpeed: k => { moveSpeed = k; }, setDetail };
   }
 
   return { create, build, SPECIES };

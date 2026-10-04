@@ -3,7 +3,7 @@
 window.GS = window.GS || {};
 
 (function () {
-  const S = GS.Sketch;
+  const S = GS.Sketch, PI = Math.PI;
   const METAL = '#b8b5ad', DARK = '#77736b', WOOD = '#c28a52', PAPER = '#efe9da', BRASS = '#d9b25a', OLIVE = '#7d8a4a';
 
   const weapons = [
@@ -153,6 +153,60 @@ window.GS = window.GS || {};
         [[382, 86], [370, 108], [394, 108]].forEach(p => S.circle(ctx, p[0], p[1], 6, DARK));
         S.poly(ctx, [[90, 60], [100, 28], [165, 28], [172, 60], [158, 60], [152, 40], [112, 40], [104, 60]], null);
         S.poly(ctx, [[110, 140], [140, 140], [134, 195], [104, 190]], DARK);
+      },
+    },
+    // ---------- From sketches/20261004_135325.jpg and sketches/candysniper.jpg ----------
+    {
+      id: 'scoperevolver', name: 'Kikarrevolver', price: '15M',
+      auto: false, fireDelay: 0.4, mag: 6, reload: 1.8, spread: 0.003, zoom: true, kick: 1.9, damage: 140,
+      muzzle: [405, 104],
+      draw(ctx) {
+        // a revolver with a scope on two round mounts and a saw-toothed barrel
+        S.poly(ctx, [[150, 95], [205, 95], [178, 205], [110, 190]], WOOD);
+        S.circle(ctx, 140, 172, 6, '#262626');
+        S.rect(ctx, 195, 88, 72, 62, DARK);
+        S.circle(ctx, 232, 120, 25, METAL);
+        S.line(ctx, 230, 108, 226, 128);
+        S.rect(ctx, 265, 92, 140, 24, METAL);
+        for (let x = 275; x < 395; x += 20) S.poly(ctx, [[x, 116], [x + 10, 128], [x + 20, 116]], METAL, 0.8);
+        S.poly(ctx, [[205, 150], [240, 150], [236, 172], [208, 170]], null);
+        S.circle(ctx, 222, 80, 9, DARK);
+        S.circle(ctx, 256, 80, 9, DARK);
+        S.rect(ctx, 175, 42, 160, 28, DARK);
+        S.circle(ctx, 178, 56, 13, '#9fd3f0');
+        S.circle(ctx, 333, 56, 12, '#9fd3f0');
+        S.line(ctx, 245, 44, 245, 66);
+      },
+    },
+    {
+      id: 'candysniper', name: 'Candy sniper', price: '25M',
+      auto: false, fireDelay: 1.1, mag: 5, reload: 2.6, spread: 0.03, zoom: true, kick: 2.4, damage: 300,
+      candy: { slow: 0.35, time: 3 }, // sticky candy: a monster that survives the hit is slowed down
+      beam: 0xff5fa8, sound: 'candy',
+      muzzle: [404, 108],
+      draw(ctx) {
+        // candy-cane barrel curving down and up to a star, a hook for a stock, a ring sight on top
+        const PINK = '#e8417a', CANDY = '#fbf3ee';
+        const band = (pts, w) => {
+          for (let i = 0; i < pts.length - 1; i++) {
+            const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], l = Math.hypot(x1 - x0, y1 - y0);
+            const nx = -(y1 - y0) / l * w / 2, ny = (x1 - x0) / l * w / 2;
+            S.poly(ctx, [[x0 + nx, y0 + ny], [x1 + nx, y1 + ny], [x1 - nx, y1 - ny], [x0 - nx, y0 - ny]], i % 2 ? PINK : CANDY, 0.6);
+          }
+        };
+        const curve = (n, f) => Array.from({ length: n + 1 }, (_, i) => f(i / n));
+        band(curve(10, t => [175 + 225 * t, (1 - t) ** 2 * 118 + 2 * t * (1 - t) * 165 + t * t * 108]), 18);
+        band([[175, 112], [90, 112]].concat(curve(8, t => { const a = -PI / 2 - t * PI * 0.85; return [90 + 32 * Math.cos(a), 144 + 32 * Math.sin(a)]; })), 18);
+        S.poly(ctx, [[130, 100], [230, 100], [230, 128], [130, 128]], PINK);
+        S.poly(ctx, [[160, 128], [190, 128], [180, 185], [150, 180]], PINK);
+        S.poly(ctx, [[190, 128], [225, 128], [220, 152], [192, 150]], null);
+        S.rect(ctx, 140, 50, 200, 14, CANDY);
+        S.poly(ctx, [[140, 50], [168, 50], [168, 100], [150, 100], [140, 80]], CANDY);
+        [215, 290].forEach(x => S.line(ctx, x, 64, x, 100));
+        S.circle(ctx, 252, 57, 26, null);
+        S.circle(ctx, 252, 57, 17, null);
+        const star = Array.from({ length: 10 }, (_, i) => { const a = i / 10 * PI * 2, r = i % 2 ? 6 : 15; return [404 + Math.cos(a) * r, 108 + Math.sin(a) * r]; });
+        S.poly(ctx, star, '#f2c935', 0.5);
       },
     },
   ];

@@ -56,6 +56,7 @@ GS.Audio = (function () {
     shot,
     splat: () => { squelch(0.35, 0.25, 900); tone(160, 0.3, 0.08, 'sawtooth', 0.4); },
     growl: (size = 1) => tone(140 / Math.sqrt(size), 0.6, 0.05, 'sawtooth', 0.6),
+    candy: power => { shot(power); tone(1100, 0.14, 0.08, 'sine', 1.7); },
     laser: () => tone(1500, 0.09, 0.07, 'sawtooth', 0.35),
     rocket: () => { squelch(0.3, 0.5, 2500); tone(200, 0.4, 0.06, 'sawtooth', 2); },
     boom: () => { squelch(0.7, 0.9, 1800); tone(90, 0.7, 0.25, 'sine', 0.4); },

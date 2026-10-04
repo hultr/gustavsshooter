@@ -36,6 +36,9 @@ GS.GunsHD = (function () {
       brass: std({ color: 0xd8aa50, metalness: 1, roughness: 0.4 }, 'brushed', 0.0002),
       copper: std({ color: 0xc8743a, metalness: 1, roughness: 0.4 }, 'brushed', 0.0002),
       olive: std({ color: 0x59633a, metalness: 0.3, roughness: 0.75 }, 'paint', 0.0004),
+      candy: std({ color: 0xd61f4f, metalness: 0, roughness: 0.25 }, 'paint', 0.0001),
+      candyWhite: std({ color: 0xf2ece4, metalness: 0, roughness: 0.3 }, 'paint', 0.0001),
+      lemon: std({ color: 0xf2c935, metalness: 0, roughness: 0.3 }, 'paint', 0.0001),
       warhead: std({ color: 0x6a7440, metalness: 0.3, roughness: 0.6 }, 'paint', 0.0003),
       rubber: std({ color: 0x18181a, metalness: 0, roughness: 1 }, 'checker', 0.0008, false),
       glove: std({ color: 0x2a2925, metalness: 0, roughness: 1 }, 'knit', 0.0008),
@@ -351,7 +354,70 @@ GS.GunsHD = (function () {
       pistolGrip(g, grip, 'grip');
       return { muzzle: [0.02, -0.46], grip, fore: { y: -0.03, z: -0.14 }, hip: [0.16, -0.2, -0.5], spinner, eject: [0.052, 0.0, 0.0], casing: 1.1, ejectEvery: 2 };
     },
+
+    // ---------- sketches/20261004_135325.jpg, sketches/candysniper.jpg ----------
+    scoperevolver(g) { // "Kikarrevolver": the revolver with a scope on two round mounts and saw teeth under the barrel
+      const info = builders.revolver(g);
+      mk(g, G.lathe([[0.0, 0], [0.0, 0.018], [-0.012, 0.019], [-0.03, 0.014], [-0.13, 0.014], [-0.15, 0.021], [-0.172, 0.021], [-0.172, 0]], 24), 'anod', [0, 0.095, 0]);
+      lens(g, 0.018, 0, 0.095, -0.1722);
+      lens(g, 0.016, 0, 0.095, 0.0002, true);
+      mk(g, Cy(0.008, 0.014, 16), 'anod', [0, 0.115, -0.075]);
+      [-0.035, -0.125].forEach(z => {
+        mk(g, ring(0.0155, 0.0035).scale(1, 1, 2.5), 'bright', [0, 0.095, z]);
+        mk(g, B(0.012, 0.034, 0.016, 0.003), 'bright', [0, 0.064, z]);
+      });
+      mk(g, many(new THREE.ConeGeometry(0.0065, 0.014, 4).rotateX(PI), Array.from({ length: 6 }, (_, i) => [[0, 0.006, -0.09 - i * 0.022]])), 'bright');
+      return info;
+    },
+
+    candysniper(g) { // "Candy sniper": candy-cane barrel and hook stock, ring sight, star at the muzzle
+      const cane = len => new THREE.MeshStandardMaterial({ map: stripes(len), roughness: 0.28, metalness: 0, envMap: M.wood.envMap, envMapIntensity: 0.5 });
+      const tube = (pts, r, len) => { const t = G.tube(pts, r, 48, 14); t.userData.uv = true; return mk(g, t, cane(len)); };
+      // the barrel dips and rises to the muzzle (as drawn)
+      const Q = t => [0, (1 - t) ** 2 * 0.02 + 2 * t * (1 - t) * -0.03 + t * t * 0.035, (1 - t) ** 2 * -0.1 + 2 * t * (1 - t) * -0.4 + t * t * -0.68];
+      tube(Array.from({ length: 9 }, (_, i) => Q(i / 8)), 0.015, 0.6);
+      // the stock: a candy-cane hook curling back and down
+      tube([[0, 0.02, 0.06], [0, 0.021, 0.2]].concat(Array.from({ length: 8 }, (_, i) => {
+        const a = PI / 2 - (i + 1) / 8 * PI * 0.85; return [0, -0.025 + Math.sin(a) * 0.045, 0.2 + Math.cos(a) * 0.045];
+      })), 0.017, 0.3);
+      mk(g, G.side([[0.1, 0.05, 0.01], [0.1, -0.008, 0.006], [-0.13, -0.008, 0.006], [-0.13, 0.05, 0.01]], 0.048, 0.005), 'candy');
+      mk(g, Cz(0.017, 0.03), 'candyWhite', [0, 0.02, -0.14]);
+      // the top rail with its block at the back, two posts and the ring sight
+      mk(g, B(0.03, 0.014, 0.3, 0.004), 'candyWhite', [0, 0.078, -0.1]);
+      mk(g, B(0.03, 0.04, 0.03, 0.005), 'candyWhite', [0, 0.058, 0.04]);
+      [-0.03, -0.17].forEach(z => mk(g, Cy(0.0045, 0.03, 10), 'bright', [0, 0.062, z]));
+      mk(g, ring(0.03, 0.0065, 32), 'candy', [0, 0.118, -0.08]);
+      mk(g, ring(0.03, 0.0015, 32), 'bright', [0, 0.118, -0.08]);
+      mk(g, B(0.008, 0.012, 0.008, 0.002), 'candy', [0, 0.087, -0.08]);
+      // a lemon star around the muzzle
+      const star = new THREE.Shape(Array.from({ length: 10 }, (_, i) => { const a = i / 10 * PI * 2, r = i % 2 ? 0.009 : 0.022; return new THREE.Vector2(Math.cos(a) * r, Math.sin(a) * r); }));
+      mk(g, new THREE.ExtrudeGeometry(star, { depth: 0.01, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 2 }), 'lemon', [0, 0.035, -0.69]);
+      bore(g, 0.006, 0, 0.035, -0.6925);
+      // a bolt with a candy-ball knob
+      const bolt = group(g, [0, 0.03, 0.06]);
+      mk(bolt, Cz(0.011, 0.05), 'bright', [0, 0, 0.03]);
+      mk(bolt, Cx(0.004, 0.04), 'bright', [0.02, 0, 0], [0, 0, -0.1]);
+      mk(bolt, new THREE.SphereGeometry(0.011, 14, 10), 'candy', [0.043, -0.004, 0]);
+      triggerGuard(g, 0.005, 'candyWhite', -0.008);
+      const grip = { y: -0.035, z: 0.07, a: -0.3 };
+      pistolGrip(g, grip, 'candy');
+      return { muzzle: [0.035, -0.71], grip, fore: { y: -0.028, z: -0.28 }, hip: [0.17, -0.18, -0.55], bolt, eject: [0.02, 0.04, 0.0], casing: 1.3 };
+    },
   };
+
+  // Candy-cane stripes running round a tube (u along it, v around): diagonal bands make a spiral.
+  // len: tube length in metres, so every gun gets stripes about 2.5 cm apart.
+  function stripes(len) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const x = c.getContext('2d');
+    x.fillStyle = '#f6f0ea'; x.fillRect(0, 0, 256, 64);
+    x.fillStyle = '#d61f4f';
+    for (let i = -1; i < 9; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32 + 14, 0); x.lineTo(i * 32 + 14 + 64, 64); x.lineTo(i * 32 + 64, 64); x.fill(); }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(len / 0.2, 1);
+    return t;
+  }
 
   // Gustav's eye, painted on a decal
   function eyeDecal() {
