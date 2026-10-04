@@ -13,6 +13,9 @@
 // Bartek family: spiders and snakes with a human-like head (hair with a side parting,
 // thick brows, a mustache and a wide grin), modelled from shapes only:
 //      Spindelbartek  – a spider; Ormbartek – a rearing snake
+// From sketches/bollboll.jpg and sketches/roo.jpg, each its own family:
+//      Bollboll       – a hopping ball with a grid on top, two eyes, a toothy mouth and a little second face
+//      Roo            – bald, round glasses, odd ears, tongue out, a long wrinkly neck and eyes on the chest
 window.GS = window.GS || {};
 
 GS.Monsters = (function () {
@@ -57,9 +60,10 @@ GS.Monsters = (function () {
     bone: 0xe6dfcc, blade: 0x2a2a30, dark: 0x3b302a, mouth: 0x2a1212, ink: 0x1c1c1c, white: 0xf7f4ea,
     bark: 0x94805f, moss: 0x9fae80, gob: 0xcfc9bd, tooth: 0xfffbe8, slime: 0xc4d68f, pink: 0xe6bca8, grey: 0xb4a9c8, rust: 0xcf9f72,
     skin: 0xe2b59a, hair: 0x3b2a1e, spider: 0x4a3b30, scale: 0x7d8a45,
+    ball: 0x9cc0dc, roo: 0xdcb8a0, tongue: 0xd0606e,
   };
   const PI = Math.PI;
-  const NOT_FLESH = [C.mouth, C.white, C.tooth];
+  const NOT_FLESH = [C.mouth, C.white, C.tooth, C.tongue];
 
   // Detailed skin per colour: [pattern, shininess, specular, bump, colour used]
   const SKINS = {
@@ -73,6 +77,8 @@ GS.Monsters = (function () {
     bone: ['enamel', 30, 0x555550, 0.02, 0xd8cfb4],
     [C.skin]: ['flesh', 30, 0x443333, 0.03, 0xd8a589], [C.hair]: ['fur', 4, 0x111111, 0.06, 0x38261a],
     [C.spider]: ['fur', 5, 0x111111, 0.07, 0x3d3128], [C.scale]: ['leather', 40, 0x445533, 0.05, 0x6f7d3c],
+    [C.ball]: ['leather', 35, 0x334455, 0.04, 0x8fb2cf], [C.roo]: ['wrinkle', 16, 0x302c28, 0.045, 0xd2ae94],
+    [C.tongue]: ['gum', 70, 0x553333, 0.02, 0xb84a5a],
   };
   const skin = c => once('hd' + c, () => {
     const [kind, shininess, specular, bumpScale, color] = SKINS[c] || ['flesh', 20, 0x333333, 0.03, c];
@@ -616,6 +622,99 @@ GS.Monsters = (function () {
     return R;
   }
 
+  // ---------- Bollboll (its own family) ----------
+  // A big ball hopping on one leg with a three-toed foot. A grid is drawn over the top of the
+  // ball; one big round eye, one dark scribbled eye, a wide mouth full of teeth, and a little
+  // second face with its own eye and grin bulging out of one side.
+  function bollboll() {
+    const R = rig(), b = R.body, col = C.ball, r = 0.6, cy = 1.0;
+    const leg = joint(b, [-0.1, 0.5, 0.05], [0, 0, 0.12]);
+    part(R, leg, limb(0.14, 0.1, 0.42), col);
+    const foot = joint(leg, [0, -0.44, 0]);
+    part(R, foot, ball(0.12, 0), col, { s: [1.2, 0.6, 1.3] });
+    for (let i = -1; i <= 1; i++) part(R, foot, ball(0.055, 0), col, { p: [i * 0.07, -0.02, 0.1], s: [0.8, 0.6, 1.5], r: [0, i * 0.4, 0] });
+    swing(R, leg, 0.35, 0);
+    // the ball turns as a whole to look at you
+    const head = look(R, joint(b, [0, cy, 0]));
+    part(R, head, ball(r), col, { s: [1, 0.95, 1] });
+    // the grid: ink lines along the ball, over the top towards its right (your left)
+    const mer = once('bbMer', () => new THREE.TorusGeometry(r * 1.005, 0.016, 4, 12, PI * 0.42));
+    for (let i = 0; i < 5; i++) part(R, joint(head, [0, 0, 0], [0, PI + 0.25 + i * 0.24, 0]), mer, C.ink, { r: [0, 0, PI * 0.08], glow: true });
+    for (let i = 0; i < 4; i++) {
+      const th = 0.35 + i * 0.27;  // angle down from the top
+      const par = once('bbPar' + i, () => new THREE.TorusGeometry(r * Math.sin(th) * 1.005, 0.016, 4, 12, 1.0).rotateX(PI / 2));
+      part(R, head, par, C.ink, { p: [0, r * 0.95 * Math.cos(th), 0], r: [0, -1.93, 0], glow: true });
+    }
+    eye(R, head, 0.25, 0.22, 0.47, 0.13);        // the big round eye
+    eye(R, head, 0.3, -0.24, 0.42, 0.09, true);  // the dark scribbled one
+    if (HD) maw(R, head, -0.1, -0.16, 0.54, 0.42, 0.3, 11);
+    else {
+      part(R, head, box(0.4, 0.22, 0.1), C.mouth, { p: [-0.1, -0.17, 0.53], glow: true, head: true });
+      for (let i = 0; i < 6; i++) part(R, head, box(0.035, 0.05, 0.02), C.white, { p: [-0.1 + (i - 2.5) * 0.06, -0.09, 0.58], glow: true, head: true });
+    }
+    // the little second face on its side
+    part(R, head, ball(0.2), col, { p: [-0.5, -0.08, 0.22], s: [0.9, 1, 0.9] });
+    eye(R, head, -0.58, -0.02, 0.34, 0.04);
+    if (HD) maw(R, head, -0.6, -0.15, 0.32, 0.12, 0.06, 5);
+    else part(R, head, arc(0.06), C.ink, { p: [-0.6, -0.13, 0.36], r: [0, -0.5, 0], glow: true, head: true });
+    return R;
+  }
+
+  // ---------- Roo (its own family) ----------
+  // Thin legs and body with two eyes on the chest, a long wrinkly neck leaning forward and a big
+  // bald head with dots on the scalp, round glasses (one lens bigger), a round ear on one side
+  // and a long pointed one on the other, a long nose and an open mouth with the tongue out.
+  function roo() {
+    const R = rig(), b = R.body, col = C.roo;
+    for (const s of [-1, 1]) {
+      const t = joint(b, [s * 0.12, 0.98, 0]);
+      part(R, t, limb(0.075, 0.06, 0.5), col);
+      const k = joint(t, [0, -0.5, 0], [0.2, 0, 0]);
+      part(R, k, limb(0.06, 0.045, 0.46), col);
+      part(R, k, box(0.1, 0.05, 0.2), col, { p: [0, -0.47, 0.05] });
+      swing(R, t, 0.6, s > 0 ? 0 : PI, 'x', { knee: k, kneeAmp: 0.8 });
+    }
+    part(R, b, trunk(0.24, 0.17, 0.72), col, { p: [0, 0.93, 0] });
+    eyes(R, b, 1.42, 0.21, 0.1, 0.045);  // the eyes on the chest
+    const neck = joint(b, [0, 1.6, 0.02], [0.5, 0, 0]);
+    part(R, neck, trunk(0.07, 0.095, 0.6), col);
+    ribs(R, neck, 0.45, 0.08, 0.05, 3, 0.1);  // wrinkles
+    const head = look(R, joint(neck, [0, 0.62, 0], [-0.5, 0, 0]));
+    part(R, head, ball(0.3), col, { p: [0, 0.13, -0.02], s: [0.95, 1.08, 1], head: true });
+    part(R, head, ball(0.16), col, { p: [0, -0.08, 0.1], s: [1, 1, 1], head: true });  // jaw and chin
+    for (let i = 0; i < 6; i++) {  // dots on the bald scalp
+      const a = -0.9 + i * 0.36, el = 0.75 + (i % 2) * 0.25;
+      part(R, head, ball(0.016, 0), C.ink, { p: [Math.sin(a) * Math.sin(el) * 0.27, 0.12 + Math.cos(el) * 0.3, Math.cos(a) * Math.sin(el) * 0.26], glow: true, head: true });
+    }
+    // round glasses: the left lens is bigger, a bridge between them and arms to the ears
+    for (const [x, y, rr] of [[-0.1, 0.15, 0.075], [0.1, 0.12, 0.055]]) {
+      eye(R, head, x, y, 0.24, rr * 0.55);
+      part(R, head, once('glass' + rr, () => new THREE.TorusGeometry(rr, 0.01, 4, 18)), C.ink, { p: [x, y, 0.29], glow: true, head: true });
+    }
+    part(R, head, box(0.07, 0.012, 0.012), C.ink, { p: [0.005, 0.15, 0.3], r: [0, 0, -0.3], glow: true, head: true });
+    for (const s of [-1, 1]) part(R, head, box(0.012, 0.012, 0.3), C.ink, { p: [s * 0.235, 0.14, 0.145], r: [0, -s * 0.32, 0], glow: true, head: true });
+    // nose, coming down long from between the lenses
+    part(R, head, ball(0.05), col, { p: [0.01, 0.0, 0.29], s: [0.8, 1.7, 1], r: [-0.4, 0, 0], head: true, k: 0.03 });
+    // the ears: round on one side, long and pointed on the other
+    part(R, head, ball(0.09), col, { p: [-0.27, 0.1, 0], s: [0.4, 1.3, 0.8], head: true, k: 0.02 });
+    const ear = joint(head, [0.24, 0.1, 0], [0, 0, -(PI / 2 - 0.35)]);
+    part(R, ear, trunk(0.012, 0.09, 0.38), col, { s: [1, 1, 0.45], head: true, k: 0.03 });
+    // the open mouth with the tongue hanging out
+    if (HD) maw(R, head, 0, -0.13, 0.22, 0.13, 0.13, 6);
+    else part(R, head, box(0.11, 0.12, 0.06), C.mouth, { p: [0, -0.12, 0.24], glow: true, head: true });
+    part(R, head, ball(0.05), C.tongue, { p: [0, -0.2, 0.27], s: [0.9, 1.5, 0.45], r: [0.5, 0, 0], head: true });
+    // thin arms with clawed hands
+    for (const s of [-1, 1]) {
+      const a = joint(b, [s * 0.25, 1.57, 0], [0, 0, s * 0.18]);
+      part(R, a, limb(0.055, 0.045, 0.55), col);
+      const f = joint(a, [0, -0.55, 0], [-0.4, 0, 0]);
+      part(R, f, limb(0.045, 0.035, 0.45), col);
+      claws(R, joint(f, [0, -0.45, 0]), 4, 0.13, C.ink);
+      arm(R, a, s > 0 ? 0 : PI);
+    }
+    return R;
+  }
+
   // ---------- Species table ----------
   // speed m/s and attack rate are multiplied by the difficulty, which grows over time.
   // from: seconds into the fight before it starts showing up.
@@ -637,12 +736,15 @@ GS.Monsters = (function () {
     { id: 'dhi', name: 'Dhi', family: 2, build: dhi, hp: 35, speed: 3.8, dmg: 1, r: 0.6, h: 0.8, move: 'fly', from: 105, weight: 2, score: 20 },
     { id: 'spider', name: 'Spindelbartek', family: 'Bartek', build: spiderBartek, hp: 70, speed: 4.2, dmg: 1, r: 0.9, h: 1.3, move: 'walk', stride: 0.45, from: 50, weight: 2, score: 25, iris: 0x6b3e1f, fineHead: true },
     { id: 'snake', name: 'Ormbartek', family: 'Bartek', build: snakeBartek, hp: 90, speed: 3.4, dmg: 2, r: 0.6, h: 1.5, move: 'walk', stride: 0.6, from: 80, weight: 2, score: 30, iris: 0x6b3e1f, fineHead: true },
+    { id: 'roo', name: 'Roo', family: 'Roo', build: roo, hp: 70, speed: 3.8, dmg: 2, r: 0.5, h: 2.6, move: 'walk', stride: 0.6, from: 20, weight: 2, score: 20, iris: 0x5a7fa8, fineHead: true },
+    { id: 'bollboll', name: 'Bollboll', family: 'Bollboll', build: bollboll, hp: 150, speed: 3.6, dmg: 2, r: 0.75, h: 1.7, move: 'hop', jump: 5, from: 40, weight: 2, score: 30, iris: 0x2d8a3a },
     { id: 'frot', name: 'Frot', family: 2, build: frot, hp: 300, speed: 1.8, dmg: 3, r: 1.0, h: 4.4, move: 'walk', lean: 0.6, from: 120, weight: 1, score: 60 },
   ];
 
   // Blood colour per family, never red: purple, poison green, yellow, blue, orange, teal,
-  // magenta. Detailed eyes get the same colour in the iris unless the species has its own.
-  const BLOOD = { 1: 0x8b45d6, 2: 0x5ee02c, 3: 0xe8c81e, 5: 0x2f7ff0, 7: 0xff8c1a, Gob: 0x1fcab4, Bartek: 0xe040c0 };
+  // magenta, white (Bollboll), black (Roo). Detailed eyes get the same colour in the iris
+  // unless the species has its own.
+  const BLOOD = { 1: 0x8b45d6, 2: 0x5ee02c, 3: 0xe8c81e, 5: 0x2f7ff0, 7: 0xff8c1a, Gob: 0x1fcab4, Bartek: 0xe040c0, Bollboll: 0xf2f2ea, Roo: 0x161616 };
   SPECIES.forEach(s => { s.blood = BLOOD[s.family]; });
 
   function build(sp, hd) {
