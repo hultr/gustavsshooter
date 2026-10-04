@@ -7,7 +7,7 @@ Pick a map in the menu:
 - **Monster attack** – Gustav's monsters (`sketches/monsters.png`) come out of the cave at the
   end of the valley. Slow at first, then faster every wave (30 s). Survive as long as you can.
   Headshots do double damage, family 2 is poisonous. Every family bleeds its own colour
-  (purple, green, yellow, blue, orange, teal, magenta – never red).
+  (purple, green, yellow, blue, orange, teal, magenta, white, black – never red).
   You heal half a heart at a time after a while without getting hit.
   The menu has a **Monster speed** slider (40–160 %), and every monster gets its own
   random pace, so some are quicker than others.
@@ -19,9 +19,16 @@ Gob (head full of teeth, its own family) from `sketches/monstersandweapons2.png`
 Bartek: Spindelbartek (a spider) and Ormbartek (a rearing snake) with a human-like head –
 hair with a side parting, thick brows, a mustache and a wide grin – modelled from shapes only.
 The reference picture `sketches/bartek.png` is private and ignored by git.
+Bollboll (`sketches/bollboll.jpg`): a ball hopping on one leg, a grid over its top, a big eye,
+a dark eye, a mouth full of teeth and a little second face on its side.
+Roo (`sketches/roo.jpg`): bald with round glasses, one round and one long pointed ear, the tongue
+out, a long wrinkly neck and two eyes on its chest. Both are their own families.
 
 Weapons 1–5 are from `sketches/weapons.png`; 6–9 from `sketches/monstersandweapons2.png`:
 Nyckel sniper (goes through monsters), AR laser, RPG (explodes), Minigun (spins up, heavy).
+10 (key 0) Kikarrevolver from `sketches/20261004_135325.jpg`: a revolver with a scope (zooms).
+11 (key -) Candy sniper from `sketches/candysniper.jpg`: candy-cane barrel and hook stock, ring
+sight; its sticky candy slows a monster that survives the hit down to 35 % for 3 s.
 
 ## Run
 
@@ -35,7 +42,7 @@ Nyckel sniper (goes through monsters), AR laser, RPG (explodes), Minigun (spins 
 ## Controls
 
 Desktop: WASD move · mouse aim · click shoot · right-click zoom (sniper) · R reload ·
-1–9 / mouse wheel switch gun · Space jump · Shift run · V switch gun graphics · Esc/P menu.
+1–9, 0, - / mouse wheel switch gun · Space jump · Shift run · V switch gun graphics · Esc/P menu.
 
 ## Graphics
 

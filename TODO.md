@@ -13,7 +13,10 @@
 - [ ] Shared scoreboard is on Firebase: check that the first real score shows up on another
       computer.
 - [ ] Buying weapons: the weapons have prices (Free, 1k … 10M) but there is no way to earn
-      money or buy them yet; all nine are available from the start.
+      money or buy them yet; all eleven are available from the start.
+
+- [ ] New weapons from 2026-10-04: the name "Kikarrevolver" (the label on the sketch is
+      unreadable) and the prices 15M / 25M are guesses – check with Gustav.
 
 ## Tuning (after more playing)
 - [ ] Difficulty: `speedMul`, `spawnEvery`, `maxAlive` in `js/monsters.js`,
@@ -25,6 +28,8 @@
       gun materials in `materials()` in `js/guns-hd.js`, recoil/sway springs in `js/viewmodel.js`.
 
 ## Done
+- [x] New sketches (2026-10-04): Kikarrevolver and Candy sniper (keys 0 and -), monsters
+      Bollboll (hops on one leg, white blood) and Roo (black blood), each its own family.
 - [x] Graphics settings: guns Sketch / 3D / Detailed 3D, monsters Simple / Detailed.
 - [x] Detailed monsters: one continuous skinned body per monster (distance fields + surface
       nets), carved mouths/eye sockets, fangs, talons, wet eyes, lifelike motion.
