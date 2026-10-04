@@ -6,6 +6,9 @@
 - [ ] Try the detailed graphics on a phone (they start off there) and on a slower computer.
       Detailed monsters are ~6–27 draw calls and ~12–20k triangles each (skin + teeth/claws);
       the skin resolution is set in `voxelFor()` in `js/monsters.js`.
+- [ ] Try the detailed world (monster valley) on a real computer and phone: frame rate with
+      shadows (4096 shadow map, desktop only) and ~240k triangles; fewer pebbles and grass
+      tufts on touch devices. Only checked in headless screenshots so far.
 - [ ] Look at the detailed monsters and guns in a real browser (only checked in headless
       screenshots so far): skin and wood colours, mouth size, reload pose.
 
@@ -24,10 +27,14 @@
 - [ ] Per-monster pace range: `PACE_MIN`/`PACE_MAX` in `js/monsters.js`.
 - [ ] Healing rate and poison strength: `updateHealth`, `POISON`, `POISON_TICK` in `js/game.js`.
 - [ ] Weapon damage, RPG radius, minigun spin-up/slowdown in `js/weapons.js`.
+- [ ] Detailed world: rock colours and moss (`rockMaterial` options in `valley()`), cliff shape
+      (`cliff()`), grass amount and the path (`grassAt`), sun shadow settings in `js/arena.js`.
 - [ ] Detailed graphics: blood colours `BLOOD` and skins `SKINS` in `js/monsters.js`,
       gun materials in `materials()` in `js/guns-hd.js`, recoil/sway springs in `js/viewmodel.js`.
 
 ## Done
+- [x] Detailed world (2026-10-04): lifelike rock, cliffs, cave, boulders, columns, ground,
+      pebbles, grass and sun shadows in the monster valley; same colliders as before.
 - [x] New sketches (2026-10-04): Kikarrevolver and Candy sniper (keys 0 and -), monsters
       Bollboll (hops on one leg, white blood) and Roo (black blood), each its own family.
 - [x] Graphics settings: guns Sketch / 3D / Detailed 3D, monsters Simple / Detailed.

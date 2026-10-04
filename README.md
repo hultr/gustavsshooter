@@ -46,7 +46,7 @@ Desktop: WASD move · mouse aim · click shoot · right-click zoom (sniper) · R
 
 ## Graphics
 
-Two buttons in the menu, saved between visits:
+Three buttons in the menu, saved between visits:
 
 - **Guns: Sketch / 3D / Detailed 3D** – Gustav's 2D drawings, simple 3D models, or detailed
   models with textured metal, wood and plastic, gloved hands, spring recoil and sway, working
@@ -57,7 +57,14 @@ Two buttons in the menu, saved between visits:
   more lifelike motion: knees bend, heads follow you, jaws stretch open, they flinch when hit
   and collapse when they die. Each kind of monster is built once in the background (~0.1–0.5 s).
 
-Both start on the detailed graphics; switch down if a phone or older computer gets slow.
+- **World: Simple / Detailed** – the monster valley as outlined low-poly shapes, or lifelike
+  stone and earth: layered cliff walls with ledges, fissures and moss, a rock cave mouth lit
+  green from inside, boulders with broken faces, weathered broken columns, stone blocks to
+  shoot from, a soil and grass floor with a trodden path, pebbles, rubble and grass tufts
+  swaying in the wind, and sun shadows (not on phones). It is built in the background in about
+  a second; the simple valley shows until then. The training range stays drawn.
+
+All start on the detailed graphics; switch down if a phone or older computer gets slow.
 
 ## Scoreboard
 
@@ -74,6 +81,7 @@ Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoo
 |------|------|
 | `js/world.js` | Training range: layout, crates, targets |
 | `js/arena.js` | Monster valley map |
+| `js/terrain.js` | Detailed valley: rock/soil/grass textures, triplanar rock material, cliffs, boulders, columns, scatter |
 | `js/monsters.js` | Monster models (both detail levels), movement, path finding, difficulty |
 | `js/blood.js` | Blood drops, splats and pools, coloured per family |
 | `js/weapons.js` | Gun stats + drawings (from `sketches/weapons.png`) |
