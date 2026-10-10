@@ -894,7 +894,12 @@ GS.Monsters = (function () {
       out.set(b.minX + n % W + 0.5 - x, b.minZ + (n / W | 0) + 0.5 - z).normalize();
       return true;
     }
-    return { build, dirFrom, clear };
+    // The middle of the free cell at (x, z), or null if it's inside something
+    function free(x, z) {
+      const c = cell(x, z);
+      return c < 0 || solid[c] ? null : { x: b.minX + c % W + 0.5, z: b.minZ + (c / W | 0) + 0.5 };
+    }
+    return { build, dirFrom, clear, free };
   }
 
   // ---------- The horde ----------
@@ -903,17 +908,55 @@ GS.Monsters = (function () {
     const nav = makeNav(map), blood = GS.Blood(scene);
     const v2 = new THREE.Vector2(), tmp = new THREE.Vector3();
     let spawnT = 0, navT = 0, moveSpeed = 1, detail = false;
+    // Map tuning (Runthrough): density = more monsters, more often; maxHeight = tall ones are
+    // shrunk to fit through doors; boost = some families more common and earlier.
+    const tune = map.monsters || {}, density = tune.density || 1, boost = tune.boost || {};
+    const weightOf = s => s.weight * (boost[s.family] ? boost[s.family].weight : 1);
+    const fromOf = s => boost[s.family] ? Math.min(s.from, boost[s.family].from) : s.from;
+    const scaleOf = sp => tune.maxHeight ? Math.min(1, tune.maxHeight / sp.h) : 1;
 
-    function spawn(elapsed) {
-      const pool = SPECIES.filter(s => elapsed >= s.from);
-      let r = Math.random() * pool.reduce((a, s) => a + s.weight, 0), sp = pool[0];
-      for (const s of pool) if ((r -= s.weight) < 0) { sp = s; break; }
-      const R = build(sp, detail);
-      const z = map.spawn.z + (Math.random() - 0.5) * map.spawn.d, x = map.spawn.x + (Math.random() - 0.5) * map.spawn.w;
-      R.root.position.set(x, sp.move === 'fly' ? 3 : 0, z);
+    // Where the next monster appears. Maps with many spawn spots (Runthrough: rooms and the far
+    // side of team areas) pick one 8-40 m from the player, mostly ahead along the way and out
+    // of sight; otherwise the map's single spawn area (the cave).
+    function spawnPlace(target) {
+      let a = map.spawn;
+      if (map.spawns) {
+        const here = map.progress(target.x, target.z), pick = [];
+        let total = 0;
+        for (const s of map.spawns) {
+          const d = Math.hypot(s.x - target.x, s.z - target.z);
+          if (d < 8 || d > 40) continue;
+          let w = s.s > here - 4 ? 3 : 1;
+          if (nav.clear(s.x, s.z, target.x, target.z)) w *= 0.2;
+          pick.push([s, w]); total += w;
+        }
+        if (!pick.length) return null;
+        let r = Math.random() * total;
+        a = pick[pick.length - 1][0];
+        for (const [s, w] of pick) if ((r -= w) < 0) { a = s; break; }
+      }
+      if (!map.spawns) return { x: a.x + (Math.random() - 0.5) * a.w, z: a.z + (Math.random() - 0.5) * a.d };
+      // rooms have furniture: try a few spots until one isn't inside something
+      for (let k = 0; k < 8; k++) {
+        const at = nav.free(a.x + (Math.random() - 0.5) * a.w, a.z + (Math.random() - 0.5) * a.d);
+        if (at) return at;
+      }
+      return null;
+    }
+
+    function spawn(elapsed, target) {
+      const at = spawnPlace(target);
+      if (!at) return;
+      const pool = SPECIES.filter(s => elapsed >= fromOf(s));
+      let r = Math.random() * pool.reduce((a, s) => a + weightOf(s), 0), sp = pool[0];
+      for (const s of pool) if ((r -= weightOf(s)) < 0) { sp = s; break; }
+      const R = build(sp, detail), k = scaleOf(sp);
+      R.root.scale.setScalar(k);
+      R.root.position.set(at.x, sp.move === 'fly' ? map.flyY || 3 : 0, at.z);
       scene.add(R.root);
+      // k: model scale; r and h: its size after scaling, used for everything size-dependent
       const m = {
-        sp, R, hp: sp.hp, pos: R.root.position, vy: 0, yaw: 0, dir: new THREE.Vector2(0, 1),
+        sp, R, k, r: sp.r * k, h: sp.h * k, hp: sp.hp, pos: R.root.position, vy: 0, yaw: 0, dir: new THREE.Vector2(0, 1),
         state: 'walk', at: 0, cd: 0, stun: 0, slowT: 0, slowK: 1, flash: 0, dead: -1, t: 0,
         pace: PACE_MIN + Math.random() * (PACE_MAX - PACE_MIN),
         walk: Math.random() * 6, gait: 0, moved: 0, hopT: 0.5, hopX: 0, hopZ: 0, los: false, losT: 0,
@@ -921,7 +964,7 @@ GS.Monsters = (function () {
       };
       R.meshes.forEach(p => { p.userData.monster = m; meshes.push(p); });
       list.push(m);
-      if (Math.random() < 0.4) GS.Audio.growl(sp.h);
+      if (Math.random() < 0.4) GS.Audio.growl(m.h);
     }
 
     function hitsWall(x, z, r, y) {
@@ -932,9 +975,10 @@ GS.Monsters = (function () {
       return false;
     }
     function step(m, vx, vz) {
-      const p = m.pos, r = Math.min(m.sp.r, 0.45), x0 = p.x, z0 = p.z;
-      if (!hitsWall(p.x + vx, p.z, r, p.y)) p.x += vx;
-      if (!hitsWall(p.x, p.z + vz, r, p.y)) p.z += vz;
+      // hoppers go round furniture like walkers, so they can't land inside a desk or a stair
+      const p = m.pos, r = Math.min(m.r, 0.45), x0 = p.x, z0 = p.z, y = m.sp.move === 'hop' ? 0 : p.y;
+      if (!hitsWall(p.x + vx, p.z, r, y)) p.x += vx;
+      if (!hitsWall(p.x, p.z + vz, r, y)) p.z += vz;
       m.moved += Math.hypot(p.x - x0, p.z - z0);
     }
     function turnTo(m, yaw, dt) {
@@ -950,8 +994,8 @@ GS.Monsters = (function () {
       const sp = m.sp, p = m.pos, fly = sp.move === 'fly', hop = sp.move === 'hop';
       m.t += dt; m.cd -= dt; m.stun -= dt; m.slowT -= dt;
       const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz) || 0.001;
-      const reach = sp.r + 0.9;
-      const inReach = d < reach && (fly ? Math.abs(target.y + 1.3 - p.y) < 1.5 : target.y - p.y < sp.h + 0.3);
+      const reach = m.r + 0.9;
+      const inReach = d < reach && (fly ? Math.abs(target.y + 1.3 - p.y) < 1.5 : target.y - p.y < m.h + 0.3);
       const grounded = !hop || p.y <= 0;
 
       if (m.state === 'attack') {
@@ -966,8 +1010,10 @@ GS.Monsters = (function () {
 
       // where to go
       let ux = dx / d, uz = dz / d;
-      if (!fly && (m.losT -= dt) <= 0) { m.los = nav.clear(p.x, p.z, target.x, target.z); m.losT = 0.25; }
-      if (!fly && !m.los && d > 2.5 && nav.dirFrom(p.x, p.z, v2)) { ux = v2.x; uz = v2.y; }
+      // indoors the flyers can't go over the walls either
+      const walls = !fly || map.indoor;
+      if (walls && (m.losT -= dt) <= 0) { m.los = nav.clear(p.x, p.z, target.x, target.z); m.losT = 0.25; }
+      if (walls && !m.los && d > 2.5 && nav.dirFrom(p.x, p.z, v2)) { ux = v2.x; uz = v2.y; }
       const k = Math.min(1, dt * 6);
       m.dir.x += (ux - m.dir.x) * k; m.dir.y += (uz - m.dir.y) * k;
       m.dir.normalize();
@@ -975,9 +1021,12 @@ GS.Monsters = (function () {
 
       const s = sp.speed * mul * m.pace * moveSpeed * (m.stun > 0 ? 0 : 1) * (m.slowT > 0 ? m.slowK : 1);
       if (fly) {
-        const alt = d > 6 ? 3.2 + Math.sin(m.t * 2) * 0.4 : target.y + 1.3;
+        const alt = d > 6 ? (map.flyY || 3.2) + Math.sin(m.t * 2) * (map.flyY ? 0.25 : 0.4) : target.y + 1.3;
         p.y += (alt - p.y) * Math.min(1, dt * 2);
-        if (d > reach * 0.7) { p.x += ux * s * dt; p.z += uz * s * dt; m.moved += s * dt; }
+        if (d > reach * 0.7) {
+          if (map.indoor) step(m, m.dir.x * s * dt, m.dir.y * s * dt);
+          else { p.x += ux * s * dt; p.z += uz * s * dt; m.moved += s * dt; }
+        }
       } else if (hop) {
         if (p.y <= 0) {
           m.hopT -= dt;
@@ -1002,7 +1051,7 @@ GS.Monsters = (function () {
       const moved = m.moved;
       if (sp.move === 'fly') { m.walk += dt * 14; m.gait = 1; }
       else {
-        m.walk += m.moved / (sp.stride || sp.h * 0.3);
+        m.walk += m.moved / ((sp.stride || sp.h * 0.3) * m.k);
         m.gait += ((m.moved > 0.001 ? 1 : 0) - m.gait) * Math.min(1, dt * 8);
       }
       for (const s of R.spin) s.rotation.x += m.moved / 0.25;
@@ -1046,7 +1095,7 @@ GS.Monsters = (function () {
         const base = R.head.userData.base, p = m.pos;
         let yaw = Math.atan2(target.x - p.x, target.z - p.z) - m.yaw;
         yaw = clampA(Math.atan2(Math.sin(yaw), Math.cos(yaw)), 0.9);
-        const pitch = clampA(Math.atan2(target.y + 1.5 - (p.y + sp.h * 0.85), Math.hypot(target.x - p.x, target.z - p.z)), 0.5);
+        const pitch = clampA(Math.atan2(target.y + 1.5 - (p.y + m.h * 0.85), Math.hypot(target.x - p.x, target.z - p.z)), 0.5);
         if ((m.twitchT -= dt) <= 0) { m.twitch = 1; m.twitchT = 1.5 + Math.random() * 4; m.twitchX = (Math.random() - 0.5) * 0.9; m.twitchZ = (Math.random() - 0.5) * 0.9; }
         m.twitch = Math.max(0, m.twitch - dt * 5);
         const k = Math.min(1, dt * 5), h = R.head.rotation;
@@ -1092,9 +1141,9 @@ GS.Monsters = (function () {
       else m.R.body.rotation.x = -Math.min(1, m.dead / 0.4) * PI / 2 * 0.95;
       if (before < land && m.dead >= land) {
         // the pool spreads out where the body landed
-        const back = sp.h * 0.45, fx = m.hd ? m.fallX : -1, fz = m.hd ? m.fallZ : 0;
+        const back = m.h * 0.45, fx = m.hd ? m.fallX : -1, fz = m.hd ? m.fallZ : 0;
         const bx = -fx * Math.sin(m.yaw) + fz * Math.cos(m.yaw), bz = -fx * Math.cos(m.yaw) - fz * Math.sin(m.yaw);
-        blood.splat(p.x - bx * back, p.z - bz * back, 1 + sp.h * 0.5, sp.blood, m.hd ? 1.6 : 0);
+        blood.splat(p.x - bx * back, p.z - bz * back, 1 + m.h * 0.5, sp.blood, m.hd ? 1.6 : 0);
         blood.burst(p.x, 0.2, p.z, 10, sp.blood);
       }
       if (m.dead > 2.5) p.y -= dt * 0.8;
@@ -1138,8 +1187,8 @@ GS.Monsters = (function () {
       const out = [], dir = new THREE.Vector3();
       for (const m of list) {
         if (m.dead >= 0) continue;
-        tmp.set(m.pos.x, m.pos.y + m.sp.h * 0.5, m.pos.z);
-        const d = tmp.distanceTo(point), reach = radius + m.sp.r;
+        tmp.set(m.pos.x, m.pos.y + m.h * 0.5, m.pos.z);
+        const d = tmp.distanceTo(point), reach = radius + m.r;
         if (d > reach) continue;
         dir.subVectors(tmp, point).normalize();
         out.push(hurt(m, amount * (1 - 0.6 * d / reach), false, tmp.clone(), dir));
@@ -1161,7 +1210,7 @@ GS.Monsters = (function () {
       m.dead = 0; m.state = 'dead'; m.vy = Math.min(m.vy, 0);
       unflash(m);
       for (let i = meshes.length - 1; i >= 0; i--) if (meshes[i].userData.monster === m) meshes.splice(i, 1);
-      blood.burst(m.pos.x, m.pos.y + m.sp.h * 0.6, m.pos.z, 24, m.sp.blood);
+      blood.burst(m.pos.x, m.pos.y + m.h * 0.6, m.pos.z, 24, m.sp.blood);
       GS.Audio.splat();
       return { killed: true, head, m };
     }
@@ -1174,7 +1223,7 @@ GS.Monsters = (function () {
         for (let j = i + 1; j < list.length; j++) {
           const b = list[j];
           if (b.dead >= 0 || b.sp.move === 'fly') continue;
-          const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, min = a.sp.r + b.sp.r;
+          const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, min = a.r + b.r;
           const d2 = dx * dx + dz * dz;
           if (d2 > min * min || d2 < 1e-6) continue;
           const d = Math.sqrt(d2), push = (min - d) * 0.5 / d, ma = a.moved, mb = b.moved;
@@ -1188,8 +1237,8 @@ GS.Monsters = (function () {
     // push the player out of monsters so they can't walk through them
     function pushOut(pos, r) {
       for (const m of list) {
-        if (m.dead >= 0 || m.sp.move === 'fly' || pos.y > m.pos.y + m.sp.h) continue;
-        const dx = pos.x - m.pos.x, dz = pos.z - m.pos.z, min = m.sp.r + r, d = Math.hypot(dx, dz);
+        if (m.dead >= 0 || m.sp.move === 'fly' || pos.y > m.pos.y + m.h) continue;
+        const dx = pos.x - m.pos.x, dz = pos.z - m.pos.z, min = m.r + r, d = Math.hypot(dx, dz);
         if (d < min && d > 1e-4) { pos.x = m.pos.x + dx / d * min; pos.z = m.pos.z + dz / d * min; }
       }
     }
@@ -1199,11 +1248,18 @@ GS.Monsters = (function () {
       if ((navT -= dt) <= 0) { nav.build(target.x, target.z); navT = 0.3; }
       let alive = 0;
       for (const m of list) if (m.dead < 0) alive++;
-      if ((spawnT -= dt) <= 0 && alive < Math.min(maxAlive(elapsed), hooks.cap || Infinity)) { spawn(elapsed); spawnT = spawnEvery(elapsed); }
+      if ((spawnT -= dt) <= 0 && alive < Math.min(Math.round(maxAlive(elapsed) * density), hooks.cap || Infinity)) { spawn(elapsed, target); spawnT = spawnEvery(elapsed) / density; }
       for (let i = list.length - 1; i >= 0; i--) {
         const m = list[i];
         if (m.dead >= 0) {
           if (dying(m, dt)) { scene.remove(m.R.root); list.splice(i, 1); }
+          continue;
+        }
+        // on a long map, monsters left far behind give up (so new ones can come out ahead)
+        if (map.spawns && Math.hypot(m.pos.x - target.x, m.pos.z - target.z) > 55) {
+          unflash(m);
+          scene.remove(m.R.root); list.splice(i, 1);
+          for (let k = meshes.length - 1; k >= 0; k--) if (meshes[k].userData.monster === m) meshes.splice(k, 1);
           continue;
         }
         think(m, dt, mul, target);
@@ -1224,6 +1280,7 @@ GS.Monsters = (function () {
         const old = m.R, R = build(m.sp, hd);
         R.root.position.copy(old.root.position);
         R.root.rotation.y = m.yaw;
+        R.root.scale.setScalar(m.k);
         scene.remove(old.root);
         scene.add(R.root);
         for (let i = meshes.length - 1; i >= 0; i--) if (meshes[i].userData.monster === m) meshes.splice(i, 1);
