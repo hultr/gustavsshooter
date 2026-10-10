@@ -18,6 +18,9 @@
 - [ ] Runthrough: check the layout against the real office (the garage and the 1 m → 0.8 m
       scale are guesses; reference material in `assets/office/`).
 
+- [ ] Runthrough: play a few rounds from each entrance and see if the random obstacles make
+      fair and fun routes; the ten places and what fits where are `SITES` in `js/runthrough.js`.
+
 ## Next features
 - [ ] Shared scoreboard is on Firebase: check that the first real score shows up on another
       computer.
@@ -41,6 +44,9 @@
       gun materials in `materials()` in `js/guns-hd.js`, recoil/sway springs in `js/viewmodel.js`.
 
 ## Done
+- [x] Runthrough random obstacles (2026-10-10): ten places, 3–6 blocked per round with a random
+      fitting mix, random entrance; headless checks: every place/mix closes its passage, 200
+      random rounds all leave a way out for you and the monsters.
 - [x] Runthrough map (2026-10-09): from the reference in `assets/` (floor plans, photos, video); headless
       checks: every spawn spot and the exit reachable on the path grid, a simulated 90 s walk
       to the exit with 31 monsters spawning, none stuck in walls, flyers staying under 3.2 m.

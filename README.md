@@ -11,14 +11,16 @@ Pick a map in the menu:
   You heal half a heart at a time after a while without getting hit.
   The menu has a **Monster speed** slider (40–160 %), and every monster gets its own
   random pace, so some are quicker than others.
-- **Runthrough** – run through Office X, a big office building: start outside the main
-  entrance and get out through the revolving door at the far end (about 200 m): café,
-  turnstiles, the corridor between the team areas, a garage, a stair hall and a hall of
-  two-storey room pods. Mail carts, rolling sign stands and scissor lifts block the obvious way
-  in places, so you have to go through rooms. Monsters come out of the rooms and from the team
-  areas at the sides – lots of them, mostly ahead of you, more Barteks than elsewhere (four kinds
-  only live here), all small enough for the doors – and get faster every 30 s. Getting out gives a bonus (more the faster
-  you are); the scoreboard shows your time, or how far you got.
+- **Runthrough** – run through Office X, a big office building, from one entrance to the
+  other (about 200 m): café, turnstiles, the corridor between the team areas, a garage, a stair
+  hall and a hall of two-storey room pods. Every round starts at one of the two entrances at
+  random, and mail carts, rolling sign stands and blue scissor lifts block 3–6 of ten places
+  (each with a mix that fits there), so you have to find the way round – through rooms, the
+  narrow turnstiles or the next gap between the pods. Monsters come out of the rooms and from
+  the team areas at the sides – lots of them, more Barteks than elsewhere (four kinds only live
+  here), all small enough for the doors – and get faster every 30 s. The distance shown is what
+  is left to walk, round this round's obstacles. Getting out gives a bonus (more the faster you
+  are); the scoreboard shows your time, or how far you got.
   The reference photos, floor plans and video are kept locally in `assets/` (ignored by git).
 
 Monster families (same number on the sketch = same family):
