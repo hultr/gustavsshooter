@@ -1112,8 +1112,9 @@ GS.Runthrough = (function () {
       spawn: { x: 66, z: 16, w: 6, d: 2 },
       goal: p => p.x > 216,
       // how js/monsters.js treats this map: more monsters at once and more often, none taller
-      // than the doors, and more of the Bartek family (weight x4, from 15 s)
-      monsters: { density: 1.8, maxHeight: 2.5, boost: { Bartek: { weight: 4, from: 15 } } },
+      // than the doors, more of the Bartek family (weight x1.5, from 15 s) and the office-only
+      // Barteks
+      monsters: { density: 1.8, maxHeight: 2.5, boost: { Bartek: { weight: 1.5, from: 15 } }, office: true },
     };
   }
 

@@ -16,8 +16,8 @@ Pick a map in the menu:
   turnstiles, the corridor between the team areas, a garage, a stair hall and a hall of
   two-storey room pods. Mail carts, rolling sign stands and scissor lifts block the obvious way
   in places, so you have to go through rooms. Monsters come out of the rooms and from the team
-  areas at the sides – lots of them, mostly ahead of you, more Barteks than elsewhere, all small
-  enough for the doors – and get faster every 30 s. Getting out gives a bonus (more the faster
+  areas at the sides – lots of them, mostly ahead of you, more Barteks than elsewhere (four kinds
+  only live here), all small enough for the doors – and get faster every 30 s. Getting out gives a bonus (more the faster
   you are); the scoreboard shows your time, or how far you got.
   The reference photos, floor plans and video are kept locally in `assets/` (ignored by git).
 
@@ -30,6 +30,9 @@ hair with a side parting, thick brows, a mustache and a wide grin – modelled f
 The reference picture `sketches/bartek.png` is private and ignored by git.
 Bollboll (`sketches/bollboll.jpg`): a ball hopping on one leg, a grid over its top, a big eye,
 a dark eye, a mouth full of teeth and a little second face on its side.
+Only in Runthrough, four more Barteks: Hoppbartek (small, jumps at you), Fladderbartek (flies on
+bat wings), Knogbartek (runs on its knuckles like an ape and stands up to hit you) and
+Bläckbartek (a big head with tentacles trailing out behind it).
 Roo (`sketches/roo.jpg`): bald with round glasses, one round and one long pointed ear, the tongue
 out, a long wrinkly neck and two eyes on its chest. Both are their own families.
 
