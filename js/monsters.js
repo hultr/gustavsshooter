@@ -933,12 +933,18 @@ GS.Monsters = (function () {
   function makeNav(map) {
     const b = map.bounds, W = Math.ceil(b.maxX - b.minX), H = Math.ceil(b.maxZ - b.minZ), INF = 65535, N = W * H;
     const solid = new Uint8Array(N), dist = new Uint16Array(N), queue = new Int32Array(N), queued = new Uint8Array(N);
-    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-      const x = b.minX + i + 0.5, z = b.minZ + j + 0.5;
-      for (const c of map.colliders) {
-        if (c.top > 0.5 && x > c.minX - 0.5 && x < c.maxX + 0.5 && z > c.minZ - 0.5 && z < c.maxZ + 0.5) { solid[j * W + i] = 1; break; }
+    // which cells are blocked; again when the map changes (Runthrough moves its obstacles every
+    // round). Colliders marked pass (turnstiles) are climbed over.
+    function refresh() {
+      solid.fill(0);
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+        const x = b.minX + i + 0.5, z = b.minZ + j + 0.5;
+        for (const c of map.colliders) {
+          if (c.top > 0.5 && !c.pass && x > c.minX - 0.5 && x < c.maxX + 0.5 && z > c.minZ - 0.5 && z < c.maxZ + 0.5) { solid[j * W + i] = 1; break; }
+        }
       }
     }
+    refresh();
     function cell(x, z) {
       const i = Math.floor(x - b.minX), j = Math.floor(z - b.minZ);
       return i < 0 || j < 0 || i >= W || j >= H ? -1 : j * W + i;
@@ -1003,7 +1009,7 @@ GS.Monsters = (function () {
       const c = cell(x, z);
       return c < 0 || solid[c] ? null : { x: b.minX + c % W + 0.5, z: b.minZ + (c / W | 0) + 0.5 };
     }
-    return { build, dirFrom, clear, free };
+    return { build, dirFrom, clear, free, refresh };
   }
 
   // ---------- The horde ----------
@@ -1074,7 +1080,7 @@ GS.Monsters = (function () {
 
     function hitsWall(x, z, r, y) {
       for (const c of map.colliders) {
-        if (c.top <= y + 0.5) continue;
+        if (c.top <= y + 0.5 || c.pass) continue;
         if (x > c.minX - r && x < c.maxX + r && z > c.minZ - r && z < c.maxZ + r) return true;
       }
       return false;
@@ -1406,6 +1412,7 @@ GS.Monsters = (function () {
     function reset() {
       list.splice(0).forEach(m => scene.remove(m.R.root));
       meshes.length = 0;
+      nav.refresh();
       spawnT = 0.5; navT = 0;
       blood.reset();
     }
