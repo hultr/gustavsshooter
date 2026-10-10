@@ -23,12 +23,20 @@
       title: 'Monster attack',
       intro: 'Gustav\'s monsters are coming out of the cave!<br>Slow at first… then faster and faster.<br>Headshots do double damage.',
     }),
+    runthrough: Object.assign(GS.Runthrough.build(), {
+      title: 'Runthrough',
+      intro: 'Run through Office X: in at the main entrance, out through the revolving door at the far end.<br>' +
+        'Monsters come out of the rooms and the team areas. The faster you get out, the bigger the bonus.',
+    }),
   };
   let mapId = 'range';
   try { if (localStorage.getItem('map') in maps) mapId = localStorage.getItem('map'); } catch (e) {}
   let world = maps[mapId];
   // Each monster is ~30-60 draw calls, so phones get fewer at once
-  const horde = GS.Monsters.create(maps.monsters, { onPlayerHit: playerHit, cap: I.isTouch ? 16 : Infinity });
+  // The monster maps each have their own horde; `horde` is the current map's (null on the range)
+  const hordes = {};
+  for (const id of ['monsters', 'runthrough']) hordes[id] = GS.Monsters.create(maps[id], { onPlayerHit: playerHit, cap: I.isTouch ? 16 : Infinity });
+  let horde = hordes[mapId] || null;
   const vm = GS.Viewmodel.create(renderer);
   renderer.autoClear = false;
 
@@ -78,7 +86,7 @@
     const p = player.pos;
     if (!blocked(p.x + vx, p.z, p.y)) p.x += vx;
     if (!blocked(p.x, p.z + vz, p.y)) p.z += vz;
-    if (world === maps.monsters) horde.pushOut(p, RADIUS);
+    if (horde) horde.pushOut(p, RADIUS);
 
     if (I.jump && player.onGround) { player.vy = JUMP; player.onGround = false; }
     player.vy -= GRAVITY * dt;
@@ -208,7 +216,7 @@
     $('score').textContent = stats.score;
   }
 
-  const shootables = () => world === maps.monsters ? world.shootables.concat(horde.meshes) : world.shootables;
+  const shootables = () => horde ? world.shootables.concat(horde.meshes) : world.shootables;
 
   function hitMonster(hit, w) {
     const r = horde.damage(hit, w.damage, dir);
@@ -302,7 +310,7 @@
     puff(p, 0xfff2a0, R * 0.15, 0.25, 2);
     for (let i = 0; i < 5; i++) puff(tmp.set(p.x + (Math.random() - 0.5) * R * 0.6, p.y + Math.random() * R * 0.4, p.z + (Math.random() - 0.5) * R * 0.6), 0x555049, R * 0.12, 1.2, 3);
     if (camera.position.distanceTo(p) < R * 3) shakeT = 0.35;
-    if (world === maps.monsters) {
+    if (horde) {
       const hits = horde.blast(p, R, w.damage);
       if (hits.length) { stats.hits++; showHitmarker(); }
       hits.forEach(scoreKill);
@@ -386,7 +394,7 @@
   let monsterStyle = load('monsterStyle', ['simple', 'hd'], 'hd');
   function setMonsterStyle(st) {
     monsterStyle = st;
-    horde.setDetail(st === 'hd');
+    Object.values(hordes).forEach(h => h.setDetail(st === 'hd'));
     $('monsterStyleBtn').textContent = 'Monsters: ' + (st === 'hd' ? 'Detailed' : 'Simple');
     save('monsterStyle', st);
   }
@@ -476,7 +484,7 @@
     player.pos.set(s.x, 0, s.z); player.vy = 0; player.yaw = s.yaw; player.pitch = 0;
     ammo = weapons.map(w => w.mag); reloadT = 0;
     maps.range.targets.forEach(t => { t.down = 0; t.fall = 0; });
-    horde.reset();
+    Object.values(hordes).forEach(h => h.reset());
     decals.splice(0).forEach(d => d.parent.remove(d));
     clearEffects();
     showTime();
@@ -521,22 +529,44 @@
     offerScore({ score: stats.score });
   }
 
+  // Runthrough: how far along the way from the main entrance to the exit, in percent
+  const wayDone = () => Math.min(99, Math.floor(world.progress(player.pos.x, player.pos.z) / world.length * 100));
+
   function gameOver() {
     GS.Audio.end();
-    const t = clock(elapsed);
+    const t = clock(elapsed), run = mapId === 'runthrough', key = run ? 'runthroughBest' : 'monsterBest';
     let best = { score: 0, time: 0 };
-    try { best = JSON.parse(localStorage.getItem('monsterBest')) || best; } catch (e) {}
+    try { best = JSON.parse(localStorage.getItem(key)) || best; } catch (e) {}
     const record = stats.score > best.score;
     if (record) {
       best = { score: stats.score, time: elapsed };
-      try { localStorage.setItem('monsterBest', JSON.stringify(best)); } catch (e) {}
+      try { localStorage.setItem(key, JSON.stringify(best)); } catch (e) {}
     }
     showMenu('The monsters got you!',
-      `Survived <b>${t}</b> · Wave ${wave}<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}<br>` +
+      (run ? `You got <b>${wayDone()}%</b> of the way in <b>${t}</b>` : `Survived <b>${t}</b> · Wave ${wave}`) +
+      `<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}<br>` +
       `Monsters killed: ${stats.kills} · Headshots: ${stats.heads}` +
       (record ? '' : `<br>Best: ${best.score} (${clock(best.time)})`), false);
     $('startBtn').textContent = 'PLAY AGAIN';
-    offerScore({ score: stats.score, time: elapsed, wave });
+    // on the Runthrough board, `wave` holds how far you got (100 = out)
+    offerScore({ score: stats.score, time: elapsed, wave: run ? wayDone() : wave });
+  }
+
+  // Runthrough: out through the revolving door. Bonus for getting out, more the faster it went.
+  function escaped() {
+    GS.Audio.end();
+    const bonus = 500 + Math.max(0, Math.round((300 - elapsed) * 5));
+    stats.score += bonus;
+    $('score').textContent = stats.score;
+    let best = { score: 0, time: 0 };
+    try { best = JSON.parse(localStorage.getItem('runthroughBest')) || best; } catch (e) {}
+    const record = stats.score > best.score;
+    if (record) try { localStorage.setItem('runthroughBest', JSON.stringify({ score: stats.score, time: elapsed })); } catch (e) {}
+    showMenu('You made it out!',
+      `Time: <b>${clock(elapsed)}</b> · Exit bonus +${bonus}<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}<br>` +
+      `Monsters killed: ${stats.kills} · Headshots: ${stats.heads}`, false);
+    $('startBtn').textContent = 'PLAY AGAIN';
+    offerScore({ score: stats.score, time: elapsed, wave: 100 });
   }
 
   // ---------- Scoreboard (js/scores.js) ----------
@@ -576,7 +606,7 @@
   async function showBoard(mine) {
     const board = mapId, top = await GS.Scores.list(board);
     if (board !== mapId) return;
-    const monsters = board === 'monsters';
+    const monsters = board === 'monsters', run = board === 'runthrough';
     $('boardTitle').textContent = '🏆 ' + maps[board].title;
     const table = $('boardTable');
     table.textContent = '';
@@ -585,7 +615,8 @@
     top.forEach((e, i) => {
       const tr = table.insertRow();
       if (mine && !marked && e.name === mine.name && e.score === mine.score) { tr.className = 'me'; marked = true; }
-      [i + 1 + '.', e.name, e.score].concat(monsters ? [clock(e.time) + ' · wave ' + e.wave] : []).forEach((v, k) => {
+      const extra = monsters ? [clock(e.time) + ' · wave ' + e.wave] : run ? [clock(e.time) + (e.wave >= 100 ? ' · out!' : ` · ${e.wave}%`)] : [];
+      [i + 1 + '.', e.name, e.score].concat(extra).forEach((v, k) => {
         const td = tr.insertCell();
         td.textContent = v;
         if (k === 0 || k === 2) td.className = 'num';
@@ -597,10 +628,10 @@
   $('boardBtn').addEventListener('click', () => { if ($('board').hidden) showBoard(); else $('board').hidden = true; });
 
   function setMap(id) {
-    mapId = id; world = maps[id];
+    mapId = id; world = maps[id]; horde = hordes[id] || null;
     try { localStorage.setItem('map', id); } catch (e) {}
     document.querySelectorAll('.mapBtn').forEach(b => b.classList.toggle('active', b.dataset.map === id));
-    document.body.classList.toggle('mode-monsters', id === 'monsters');
+    document.body.classList.toggle('mode-monsters', !!hordes[id]);
     started = false;
     $('board').hidden = true; $('nameForm').hidden = true; pending = null;
     showMenu(world.title, world.intro, false);
@@ -612,7 +643,7 @@
   function setMonsterSpeed(pct) {
     $('speedRange').value = pct;
     $('speedVal').textContent = pct + '%';
-    horde.setSpeed(pct / 100);
+    Object.values(hordes).forEach(h => h.setSpeed(pct / 100));
     try { localStorage.setItem('monsterSpeed', pct); } catch (e) {}
   }
   let savedSpeed = 100;
@@ -630,7 +661,11 @@
   const clock = t => { const s = Math.floor(t); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
   function showTime() {
     const el = $('timer');
-    if (world === maps.monsters) {
+    if (mapId === 'runthrough') {
+      const left = Math.max(0, Math.round(world.length - world.progress(player.pos.x, player.pos.z)));
+      el.textContent = `${clock(elapsed)} · ${left} m to the exit`;
+      el.classList.remove('low');
+    } else if (horde) {
       el.textContent = `Wave ${wave} · ${clock(elapsed)}`;
       el.classList.remove('low');
     } else {
@@ -641,7 +676,7 @@
   }
 
   function updateTimer(dt) {
-    if (world === maps.monsters) {
+    if (horde) {
       elapsed += dt;
       const w = Math.floor(elapsed / WAVE) + 1;
       if (w > wave) { wave = w; popup(`Wave ${wave} – faster!`); GS.Audio.growl(3); }
@@ -669,10 +704,11 @@
       updatePlayer(dt);
       updateWeapon(dt);
       updateEffects(dt);
-      if (world === maps.monsters) {
+      if (horde) {
         horde.update(dt, elapsed, player.pos);
         updateHealth(dt);
       }
+      if (running && world.goal && world.goal(player.pos)) escaped();
       if (running) updateTimer(dt);
     } else {
       // slow idle pan behind the menu
