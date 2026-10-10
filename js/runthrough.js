@@ -259,30 +259,6 @@ GS.Runthrough = (function () {
     };
   }
 
-  // Route the video takes, from the main entrance to the exit; used to measure how far the
-  // player has come and to send monsters out ahead of them. It takes the detours round the
-  // things in the way: the narrow gates, the Innovation Garage, room W3 and a middle pod room.
-  const ROUTE = [[53.7, -10], [53.7, 1], [49.6, 11], [48.2, 17], [50, 21.5], [64, 21.5], [66.7, 18],
-    [68.5, 16.3], [76, 16.3], [84, 22.8], [96.5, 22.8], [106, 23.5], [110.6, 22.6], [110.6, 19],
-    [117.1, 19], [117.1, 23], [119, 23.2], [138, 22.8], [142, 21.5], [154, 21.5], [159.65, 23],
-    [159.65, 29.6], [166.8, 29.6], [167, 21.5], [170, 21.5], [196.5, 19.6], [212, 19.5], [222, 19.5]];
-  const SEGS = [];
-  let LENGTH = 0;
-  for (let i = 1; i < ROUTE.length; i++) {
-    const [ax, az] = ROUTE[i - 1], [bx, bz] = ROUTE[i], len = Math.hypot(bx - ax, bz - az);
-    SEGS.push({ ax, az, dx: bx - ax, dz: bz - az, len, at: LENGTH });
-    LENGTH += len;
-  }
-  function progress(x, z) {
-    let best = 1e9, s = 0;
-    for (const g of SEGS) {
-      const t = Math.max(0, Math.min(1, ((x - g.ax) * g.dx + (z - g.az) * g.dz) / (g.len * g.len)));
-      const d = Math.hypot(g.ax + g.dx * t - x, g.az + g.dz * t - z);
-      if (d < best) { best = d; s = g.at + g.len * t; }
-    }
-    return s;
-  }
-
   function build() {
     const scene = new THREE.Scene();
     const colliders = [], shootables = [], spawns = [];
@@ -345,17 +321,21 @@ GS.Runthrough = (function () {
     };
 
     // ---------- Geometry: everything static is merged per material and per 32 m strip ----------
+    // While a barrier variant is being built (`into`), its geometry, colliders and signs go
+    // into the variant instead, so it can be switched on and off.
     const parts = new Map();
+    let into = null;
     function add(m, geo) {
       GS.Geo.projectUV(geo, 1);       // UVs in metres; each texture's repeat sets its size
       geo.computeBoundingBox();
       const cx = (geo.boundingBox.min.x + geo.boundingBox.max.x) / 2;
-      const key = m.uuid + ':' + Math.floor(cx / 32);
-      if (!parts.has(key)) parts.set(key, { m, geos: [] });
-      parts.get(key).geos.push(geo);
+      const key = m.uuid + ':' + Math.floor(cx / 32), P = into ? into.parts : parts;
+      if (!P.has(key)) P.set(key, { m, geos: [] });
+      P.get(key).geos.push(geo);
     }
-    function collide(x0, z0, x1, z1, top) {
-      colliders.push({ minX: Math.min(x0, x1), maxX: Math.max(x0, x1), minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1), top });
+    // pass: monsters climb over it (the turnstiles)
+    function collide(x0, z0, x1, z1, top, pass) {
+      (into ? into.cols : colliders).push({ minX: Math.min(x0, x1), maxX: Math.max(x0, x1), minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1), top, pass });
     }
     // axis-aligned box from (x0,y0,z0) to (x1,y1,z1); solid ones block walking
     function box(m, x0, y0, z0, x1, y1, z1, solid) {
@@ -392,7 +372,7 @@ GS.Runthrough = (function () {
     // Monsters appear inside rooms and at the far side of the team areas
     function spawnAt(x0, z0, x1, z1) {
       const x = (x0 + x1) / 2, z = (z0 + z1) / 2;
-      spawns.push({ x, z, w: Math.max(0.2, x1 - x0), d: Math.max(0.2, z1 - z0), s: progress(x, z) });
+      spawns.push({ x, z, w: Math.max(0.2, x1 - x0), d: Math.max(0.2, z1 - z0), s: 0 });   // s: set by randomize()
     }
 
     // A room: four walls, a roof, a ceiling light, a table, a spawn point.
@@ -508,8 +488,7 @@ GS.Runthrough = (function () {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), signMats.get(draw));
       m.position.set(x, y, z);
       m.rotation.y = rotY;
-      scene.add(m);
-      shootables.push(m);
+      if (into) { into.group.add(m); into.shoot.push(m); } else { scene.add(m); shootables.push(m); }
       return m;
     }
 
@@ -546,7 +525,8 @@ GS.Runthrough = (function () {
     function turnstiles(line, a0, a1, wide, alongX) {
       const cab = a => {
         const [x0, z0, x1, z1] = alongX ? [a, line - 0.7, a + 0.2, line + 0.7] : [line - 0.7, a, line + 0.7, a + 0.2];
-        box(M.steel, x0, 0, z0, x1, 1.0, z1, true);
+        box(M.steel, x0, 0, z0, x1, 1.0, z1);
+        collide(x0, z0, x1, z1, 1.0, true);
         box(M.dark, x0, 1.0, z0, x1, 1.04, z1);
         const [lx, lz] = alongX ? [a + 0.1, line - 0.6] : [line - 0.6, a + 0.1];
         box(M.led, lx - 0.05, 1.04, lz - 0.05, lx + 0.05, 1.07, lz + 0.05);
@@ -760,7 +740,6 @@ GS.Runthrough = (function () {
     plant(60.5, 11.2, 1.2); plant(47.2, 11, 1.1);
     // turnstiles into the office, with coloured acoustic panels above (video 0:10-0:12)
     turnstiles(17, 46.4, 52.5, 49.0, true);
-    signRow(49.0, 17, 52.3, 17, 3, [closedSign]);   // the wide gate is closed: take a narrow one
     [[0x2c5aa0, 46.4, 15.6], [0x9a6f86, 48.4, 15.6], [0x6c7178, 50.4, 15.6], [0x1f3550, 47.4, 17.6], [0xb18a96, 49.4, 17.6]]
       .forEach(([c, x, z]) => box(lam({ color: c }), x, 3.4, z, x + 2, 3.5, z + 2));
     box(M.dark, 46.3, 2.35, 19.1, 52.5, 3.65, 19.25);
@@ -768,11 +747,12 @@ GS.Runthrough = (function () {
 
     // --- The north side: team areas and meeting-room pods between the columns ---
     // A pod: a stack of rooms along z; doors alternate east/west, the end room opens to the corridor
-    function podL(x0, x1, z0, z1, toCorridor) {
+    // through: the end room also has a door on that side (a way round a blocked corridor)
+    function podL(x0, x1, z0, z1, toCorridor, through) {
       const n = 4, step = (z1 - z0) / n, cx = (x0 + x1) / 2;
       for (let i = 0; i < n; i++) {
         const a = z0 + i * step, b = a + step, end = toCorridor === 's' ? i === n - 1 : i === 0;
-        const doors = end ? { [toCorridor]: [cx] } : (i % 2 ? { w: [(a + b) / 2] } : { e: [(a + b) / 2] });
+        const doors = end ? { [toCorridor]: [cx], ...(through ? { [through]: [(a + b) / 2] } : {}) } : (i % 2 ? { w: [(a + b) / 2] } : { e: [(a + b) / 2] });
         room(x0, a, x1, b, { doors, glass: end ? null : [i % 2 ? 'e' : 'w', a + 0.6, b - 0.6] });
       }
     }
@@ -808,7 +788,7 @@ GS.Runthrough = (function () {
     cyl(M.purple, 5.3, 0, 43, 2.0, 2.0, 0.3, 24);      // the simulator's round platform
     podL(10.7, 16.5, 29, 47.5, 'n');
     podL(31, 37, 29, 47.5, 'n');
-    podL(56.3, 62, 29, 47.5, 'n');
+    podL(56.3, 62, 29, 47.5, 'n', 'e');
     desks(16.5, 31, 29, 47.5, 's');
     desks(37, 56.3, 29, 47.5, 's');
     desks(62, 72, 29, 47.5, 's');
@@ -914,10 +894,6 @@ GS.Runthrough = (function () {
     box(M.dark, 84.7, 6.6, 14, 85.3, 7.4, 14.8);
     cyl(M.steel, 85, 4.2, 14.4, 0.02, 0.02, 2.4, 4);
     ductZ(0.3, 36.2, 8.2, 74.5, 0.5);
-    // a scissor lift and sign stands close the way in from the corridor, so you go round
-    // through the Innovation Garage and its back door
-    scissorLift(72.75, 22.15, false, 5.4, HG);
-    signRow(72.75, 23.3, 72.75, 26.1, 2, [closedSign, liftSign]);
     // spawn spots in the garage (behind the trucks and racks)
     spawnAt(74, 2, 78, 4.5); spawnAt(91, 2, 95.5, 4.5); spawnAt(87, 14, 93, 15.8); spawnAt(73.5, 31.5, 77, 35.5);
     // lab rooms south of the garage
@@ -930,10 +906,10 @@ GS.Runthrough = (function () {
     for (const x of [73, 81.5, 89.5]) { box(M.grey, x, 0, 45.5, x + 6, 0.9, 46.6, true); box(M.steel, x, 0.9, 45.5, x + 6, 0.93, 46.6); }
 
     // --- East strip: labs and the stair hall ("same feature" on both plans) ---
-    wallZ(M.plaster, 9, 96.5, 108, H1);
+    wallZ(M.plaster, 9, 96.5, 108, H1, [103]);
     wallZ(M.plaster, 19, 96.5, 108, H1, [99.6]);
     wallZ(M.plaster, 26, 96.5, 108, H1, [99.6]);
-    wallZ(M.plaster, 36.5, 96.5, 108, H1);
+    wallZ(M.plaster, 36.5, 96.5, 108, H1, [103]);
     spawnAt(97.5, 1, 107, 8); spawnAt(97.5, 10, 107, 18); spawnAt(97.5, 27, 107, 35.5); spawnAt(97.5, 37.5, 107, 46.5);
     for (const [z0, z1] of [[1, 8], [27, 35.5], [37.5, 46.5]]) { box(M.white, 103, 0, z0 + 1, 107.5, 0.9, z0 + 2.2, true); box(M.screen, 104, 0.9, z0 + 1.3, 105.2, 1.6, z0 + 1.35); }
     for (let i = 0; i < 9; i++) box(M.oak, 102.5 + i * 0.6, 0, 19.1, 107.9, 0.36 * (i + 1), 20.9, true);
@@ -969,9 +945,6 @@ GS.Runthrough = (function () {
 
     // west end: closed rooms, a passage from the stair hall, service rooms
     wallZ(M.plaster, 21.5, 108, 122.9, 4.5, [110.6, 117.1]);
-    // a mail cart and sign stands block the passage: through room W3 (in at 110.6, out at 117.1)
-    mailCart(114, 22.2, false);
-    signRow(114, 22.8, 114, 25.5, 2, [closedSign]);
     wallZ(M.plaster, 10, 108, 122.9, 4.5);
     wallX(M.plaster, 122.9, 0, 21.5, H2);
     box(M.plaster, 108, 4.5, 0, 122.9, 4.7, 21.5);
@@ -1022,10 +995,8 @@ GS.Runthrough = (function () {
       room(x0, 15.4, x1, 19, { h: 3.0, doors: { n: [cx] }, table: false });   // small rooms by the passage
     });
     const MID = [[127.6, 133.1], [142, 147.5], [156.9, 162.4], [171.6, 176.9], [186.2, 191.3]];
-    // the third one has doors at both ends: the way round the scissor lift in the passage
-    MID.forEach(([x0, x1], i) => room(x0, 24, x1, 28.5, { h: 3.2, doors: i === 2 ? { n: [(x0 + x1) / 2], s: [(x0 + x1) / 2] } : { [i % 2 ? 'n' : 's']: [(x0 + x1) / 2] }, table: false }));
-    scissorLift(162.1, 20.25, false, 4.6, H2);   // under the duct (video 0:24)
-    signRow(162.1, 21.45, 162.1, 24, 2, [liftSign, closedSign]);
+    // doors at both ends: a way round when the passage is blocked
+    MID.forEach(([x0, x1]) => room(x0, 24, x1, 28.5, { h: 3.2, doors: { n: [(x0 + x1) / 2], s: [(x0 + x1) / 2] }, table: false }));
     for (let i = 0; i < 10; i++) box(M.oak, 147.8 + i * 0.48, 0, 22, 152.6, 0.35 * (i + 1), 24, true);   // stair up
     box(M.glass, 147.8, 0.4, 21.95, 152.6, 4.4, 22.0);
     const LOW = [[127.6, 132.7], [142, 147.5], [156.9, 161.9], [171.6, 176.9], [186.2, 191.3]];
@@ -1088,6 +1059,56 @@ GS.Runthrough = (function () {
     plant(210.8, 16.6, 1.3); plant(201.8, 23.4, 1.2);
     box(M.dark, 210.6, 0, 23.8, 211.4, 1.2, 24.4, true);   // bins by the door
 
+    // ---------- Things in the way, different every round ----------
+    // Each site is a line across a passage that has a way round it (through rooms, the other
+    // gates or the next gap between the pods). `types` lists what fits there: a row of sign
+    // stands, or scissor lifts and mail carts with sign stands filling the rest of the line.
+    // Every site/type pair is built once, hidden; randomize() picks a few for each round.
+    const SITES = [
+      { name: 'café gate', line: 17, a0: 49.0, a1: 52.3, alongX: true, deck: 2.0, ceil: 3.4, types: ['signs', 'cart', 'lift'] },
+      { name: 'corridor by pod D', line: 59.2, a0: 19.1, a1: 28.9, deck: 3.6, ceil: H1, types: ['signs', 'lift+cart', 'cart+cart+cart', 'lift+lift'] },
+      { name: 'garage, way in', line: 72.75, a0: 21.05, a1: 25.95, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
+      { name: 'garage, way out', line: 96.0, a0: 19.8, a1: 25.7, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart+cart', 'lift+cart'] },
+      { name: 'after the stair hall', line: 114, a0: 21.6, a1: 25.4, deck: 3.6, ceil: H2, types: ['signs', 'lift', 'cart', 'cart+cart'] },
+      { name: 'south, by the lab', line: 132.3, a0: 21.6, a1: 23.9, types: ['signs', 'cart'] },
+      { name: 'south, pod 2', line: 146.6, a0: 19.1, a1: 23.9, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
+      { name: 'south, pod 3', line: 162.1, a0: 19.1, a1: 23.9, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
+      { name: 'south, pod 4', line: 176.1, a0: 19.1, a1: 23.9, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
+      { name: 'reception gate', line: 196.5, a0: 18.4, a1: 20.7, types: ['signs', 'cart'] },
+    ];
+    const PIECE = { lift: 2.56, cart: 1.32 };   // length along the line
+    function barrier(site, type) {
+      const { line, a0, a1, alongX } = site, at = a => (alongX ? [a, line] : [line, a]);
+      const pieces = type === 'signs' ? [] : type.split('+'), span = pieces.reduce((n, p) => n + PIECE[p], 0);
+      const atEnd = rnd() < 0.5;   // the big pieces at one end, sign stands filling the rest
+      let a = atEnd ? a1 - span : a0;
+      for (const p of pieces) {
+        const [cx, cz] = at(a + PIECE[p] / 2);
+        if (p === 'lift') scissorLift(cx, cz, alongX, site.deck, site.ceil); else mailCart(cx, cz, alongX);
+        a += PIECE[p];
+      }
+      const [r0, r1] = atEnd ? [a0, a1 - span] : [a0 + span, a1];
+      if (r1 - r0 > 0.25) {
+        const draws = pieces.includes('lift') ? [liftSign, closedSign] : [closedSign];
+        signRow(...at(r0), ...at(r1), Math.max(1, Math.round((r1 - r0) / 1.2)), draws);
+      }
+    }
+    for (const site of SITES) {
+      site.variants = site.types.map(type => {
+        into = { parts: new Map(), cols: [], group: new THREE.Group(), shoot: [] };
+        barrier(site, type);
+        const v = into;
+        into = null;
+        for (const { m, geos } of v.parts.values()) {
+          const mesh = new THREE.Mesh(GS.Geo.merge(geos), m);
+          v.group.add(mesh); v.shoot.push(mesh);
+        }
+        v.group.visible = false;
+        scene.add(v.group);
+        return { type, group: v.group, cols: v.cols, shoot: v.shoot };
+      });
+    }
+
     // ---------- Merge into meshes ----------
     for (const { m, geos } of parts.values()) {
       const mesh = new THREE.Mesh(GS.Geo.merge(geos), m);
@@ -1095,6 +1116,100 @@ GS.Runthrough = (function () {
       scene.add(mesh);
       shootables.push(mesh);
     }
+
+    // ---------- The way out: walking distance to the goal on a 0.25 m grid ----------
+    // Cells closer than 0.3 m to something you can't step over are blocked (that keeps the
+    // 1 m turnstile lanes open). Flooded from the goal, it tells how far it is to walk out
+    // from anywhere, round whatever is in the way this round.
+    const bounds = { minX: -2, maxX: 236, minZ: -22, maxZ: 50 }, CELL = 0.25, GROW = 0.3;
+    const GW = Math.ceil((bounds.maxX - bounds.minX) / CELL), GH = Math.ceil((bounds.maxZ - bounds.minZ) / CELL), INF = 1e9;
+    const baseSolid = new Uint8Array(GW * GH), solid = new Uint8Array(GW * GH), far = new Float32Array(GW * GH);
+    const queue = new Int32Array(GW * GH), queued = new Uint8Array(GW * GH);
+    function blockOut(cols, grid) {
+      for (const c of cols) {
+        if (c.top <= 0.4) continue;
+        const i0 = Math.max(0, Math.ceil((c.minX - GROW - bounds.minX) / CELL - 0.5)), i1 = Math.min(GW - 1, Math.floor((c.maxX + GROW - bounds.minX) / CELL - 0.5));
+        const j0 = Math.max(0, Math.ceil((c.minZ - GROW - bounds.minZ) / CELL - 0.5)), j1 = Math.min(GH - 1, Math.floor((c.maxZ + GROW - bounds.minZ) / CELL - 0.5));
+        if (i0 <= i1) for (let j = j0; j <= j1; j++) grid.fill(1, j * GW + i0, j * GW + i1 + 1);
+      }
+    }
+    blockOut(colliders, baseSolid);
+    const cellOf = (x, z) => {
+      const i = Math.floor((x - bounds.minX) / CELL), j = Math.floor((z - bounds.minZ) / CELL);
+      return i < 0 || j < 0 || i >= GW || j >= GH ? -1 : j * GW + i;
+    };
+    function flood(goal) {
+      far.fill(INF);
+      let head = 0, size = 0;
+      for (let c = 0; c < GW * GH; c++) {
+        if (solid[c] || !goal(bounds.minX + (c % GW + 0.5) * CELL, bounds.minZ + ((c / GW | 0) + 0.5) * CELL)) continue;
+        far[c] = 0; queue[size++] = c; queued[c] = 1;
+      }
+      const N = GW * GH;
+      while (size > 0) {   // queue-based relaxation, as in the monsters' path finding
+        const c = queue[head]; head = (head + 1) % N; size--; queued[c] = 0;
+        const i = c % GW, j = c / GW | 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          if (!di && !dj) continue;
+          const ni = i + di, nj = j + dj;
+          if (ni < 0 || nj < 0 || ni >= GW || nj >= GH) continue;
+          const n = nj * GW + ni;
+          if (solid[n] || (di && dj && (solid[c + di] || solid[c + dj * GW]))) continue;
+          const d = far[c] + (di && dj ? 1.4142 : 1) * CELL;
+          if (d < far[n]) {
+            far[n] = d;
+            if (!queued[n]) { queued[n] = 1; queue[(head + size) % N] = n; size++; }
+          }
+        }
+      }
+    }
+    // metres still to walk from (x, z); next to a wall, the nearest open cell counts
+    function toGo(x, z) {
+      const c = cellOf(x, z);
+      if (c < 0) return INF;
+      let best = far[c];
+      for (let r = 1; best >= INF && r <= 3; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        const n = c + dj * GW + di;
+        if (n >= 0 && n < GW * GH && far[n] < best) best = far[n];
+      }
+      return best;
+    }
+
+    // Two ways through: in at the main entrance and out at the far end, or the other way round
+    const ENDS = {
+      main: { start: { x: 53.7, z: -11, yaw: PI }, goal: (x, z) => x > 216 },
+      south: { start: { x: 225, z: 19.5, yaw: PI / 2 }, goal: (x, z) => z < -3 && x > 35 && x < 73 },
+    };
+    let end = ENDS.main;
+    const staticCols = colliders.length, staticShoot = shootables.length;
+    // A new round: pick the entrance, then 3-6 sites to block with a random type each, and
+    // check there is still a way out (otherwise try again)
+    function randomize() {
+      end = Math.random() < 0.5 ? ENDS.main : ENDS.south;
+      Object.assign(api.start, end.start);
+      let picks = [];
+      for (let tries = 0; tries < 30 && !picks.length; tries++) {
+        const order = SITES.map(s => [Math.random(), s]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
+        const p = order.slice(0, 3 + Math.floor(Math.random() * 4)).map(s => [s, s.variants[Math.floor(Math.random() * s.variants.length)]]);
+        if (tryPicks(p)) picks = p;
+      }
+      if (!picks.length) tryPicks(picks);   // (never happens: every site has a way round)
+      for (const s of SITES) for (const v of s.variants) v.group.visible = false;
+      for (const [, v] of picks) v.group.visible = true;
+      colliders.length = staticCols; shootables.length = staticShoot;
+      for (const [, v] of picks) { colliders.push(...v.cols); shootables.push(...v.shoot); }
+      api.blocked = picks.map(([s, v]) => s.name + ': ' + v.type);
+      for (const sp of spawns) sp.s = progress(sp.x, sp.z);
+    }
+    function tryPicks(picks) {
+      solid.set(baseSolid);
+      for (const [, v] of picks) blockOut(v.cols, solid);
+      flood(end.goal);
+      api.length = toGo(end.start.x, end.start.z);
+      return api.length < INF;
+    }
+    // how far along the way (metres from the start, as you walk)
+    function progress(x, z) { return Math.max(0, api.length - Math.min(api.length, toGo(x, z))); }
 
     let robotDir = 1;
     function update(dt, time) {
@@ -1104,18 +1219,20 @@ GS.Runthrough = (function () {
       robot.rotation.y = robotDir > 0 ? 0 : PI;
     }
 
-    return {
-      scene, colliders, shootables, update, spawns, progress, length: LENGTH,
+    const api = {
+      scene, colliders, shootables, update, spawns, progress, randomize, length: 0, blocked: [], sites: SITES,
       indoor: true, flyY: 2.6,
-      start: { x: 53.7, z: -11, yaw: PI },
-      bounds: { minX: -2, maxX: 236, minZ: -22, maxZ: 50 },
+      start: Object.assign({}, ENDS.main.start),
+      bounds,
       spawn: { x: 66, z: 16, w: 6, d: 2 },
-      goal: p => p.x > 216,
+      goal: p => end.goal(p.x, p.z),
       // how js/monsters.js treats this map: more monsters at once and more often, none taller
       // than the doors, more of the Bartek family (weight x1.5, from 15 s) and the office-only
       // Barteks
       monsters: { density: 1.8, maxHeight: 2.5, boost: { Bartek: { weight: 1.5, from: 15 } }, office: true },
     };
+    randomize();
+    return api;
   }
 
   return { build };

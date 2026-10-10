@@ -25,7 +25,8 @@
     }),
     runthrough: Object.assign(GS.Runthrough.build(), {
       title: 'Runthrough',
-      intro: 'Run through Office X: in at the main entrance, out through the revolving door at the far end.<br>' +
+      intro: 'Run through Office X: in at one entrance, out at the other. Each round starts at one of the two at random, ' +
+        'and carts, sign stands and lifts block different ways.<br>' +
         'Monsters come out of the rooms and the team areas. The faster you get out, the bigger the bonus.',
     }),
   };
@@ -475,6 +476,7 @@
   let timeLeft = ROUND, elapsed = 0, wave = 1, running = false, started = false;
 
   function resetRound() {
+    if (world.randomize) world.randomize();   // Runthrough: a new entrance and new obstacles
     Object.assign(stats, { score: 0, shots: 0, hits: 0, bulls: 0, kills: 0, heads: 0 });
     $('score').textContent = 0;
     timeLeft = ROUND; elapsed = 0; wave = 1;
