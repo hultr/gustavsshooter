@@ -13,6 +13,9 @@
 // Bartek family: spiders and snakes with a human-like head (hair with a side parting,
 // thick brows, a mustache and a wide grin), modelled from shapes only:
 //      Spindelbartek  – a spider; Ormbartek – a rearing snake
+//      only in the office (Runthrough): Hoppbartek – small and jumping; Fladderbartek – flies
+//      on bat wings; Knogbartek – runs on its knuckles, stands up to hit; Bläckbartek – a big
+//      head with tentacles trailing out behind it
 // From sketches/bollboll.jpg and sketches/roo.jpg, each its own family:
 //      Bollboll       – a hopping ball with a grid on top, two eyes, a toothy mouth and a little second face
 //      Roo            – bald, round glasses, odd ears, tongue out, a long wrinkly neck and eyes on the chest
@@ -99,7 +102,7 @@ GS.Monsters = (function () {
   function part(R, parent, geo, color, o = {}) {
     const flesh = HD && geo.userData.sdf && !o.glow && !o.mat && !NOT_FLESH.includes(color);
     const look = HD && geo.userData.sdf && !flesh ? smooth(geo) : geo;
-    const m = new THREE.Mesh(look, flesh ? PROXY : HD ? (o.mat || skin(color)) : o.glow ? basic(color) : lambert(color));
+    const m = new THREE.Mesh(look, flesh ? PROXY : HD ? (o.mat || skin(color)) : o.glow ? basic(color) : (o.mat || lambert(color)));
     if (o.p) m.position.fromArray(o.p);
     if (o.r) m.rotation.fromArray(o.r);
     if (o.s) m.scale.fromArray(o.s);
@@ -622,6 +625,102 @@ GS.Monsters = (function () {
     return R;
   }
 
+  // ----- Office Barteks (only in Runthrough) -----
+  // Hoppbartek: a small round body on folded frog legs under a big head, tiny clawed hands
+  function hoppBartek() {
+    const R = rig(), b = R.body, col = C.skin;
+    part(R, b, ball(0.18), col, { p: [0, 0.34, -0.06], s: [1, 0.9, 1.15] });
+    for (const sd of [-1, 1]) {
+      const t = joint(b, [sd * 0.13, 0.32, -0.1], [0.9, 0, sd * 0.25]);   // thigh folded back
+      part(R, t, limb(0.08, 0.06, 0.24), col);
+      const k = joint(t, [0, -0.24, 0], [-1.9, 0, 0]);                     // shin forward and down
+      part(R, k, limb(0.06, 0.04, 0.26), col);
+      part(R, k, box(0.1, 0.04, 0.18), col, { p: [0, -0.27, 0.06] });
+      swing(R, t, 0.4, 0, 'x', { knee: k, kneeAmp: 0.6 });
+      const a = joint(b, [sd * 0.14, 0.4, 0.1], [0.5, 0, sd * 0.3]);
+      part(R, a, limb(0.035, 0.03, 0.2), col);
+      claws(R, joint(a, [0, -0.2, 0]), 3, 0.08, C.ink);
+      arm(R, a, sd > 0 ? 0 : PI, 0.6);
+    }
+    bartekHead(R, look(R, joint(b, [0, 0.66, 0.04])), 0.85);
+    return R;
+  }
+
+  // Fladderbartek: the head with a small body hanging under it, flying on two leathery bat
+  // wings (bony fingers with skin between them) and dangling clawed feet
+  function fladderBartek() {
+    const R = rig(), b = R.body, col = C.skin;
+    part(R, b, ball(0.15), col, { p: [0, -0.3, -0.12], s: [0.9, 1.2, 0.9] });
+    for (const sd of [-1, 1]) {
+      const l = joint(b, [sd * 0.07, -0.42, -0.12], [0.3, 0, 0]);
+      part(R, l, limb(0.035, 0.025, 0.3), col);
+      claws(R, joint(l, [0, -0.3, 0]), 3, 0.08, C.ink);
+      swing(R, l, 0.25, sd * 1.5, 'x');
+      const w = joint(b, [sd * 0.16, -0.12, -0.1], [0, 0, sd * PI / 2]);  // the wing points out sideways
+      part(R, w, limb(0.035, 0.02, 0.85), C.grey);                          // the arm bone along the front edge
+      for (let i = 0; i < 3; i++) part(R, w, limb(0.015, 0.008, 0.55 - i * 0.1), C.grey, { p: [0, -0.3 - i * 0.2, 0], r: [0.8 + i * 0.25, 0, 0] });
+      const membrane = once('fbWing', () => {
+        const sh = new THREE.Shape();
+        sh.moveTo(0, 0); sh.lineTo(-0.85, 0); sh.lineTo(-0.75, -0.35); sh.lineTo(-0.55, -0.25);
+        sh.lineTo(-0.4, -0.48); sh.lineTo(-0.25, -0.3); sh.lineTo(0, -0.4); sh.lineTo(0, 0);
+        return new THREE.ShapeGeometry(sh).rotateZ(PI / 2).rotateY(PI / 2);   // shape x runs down the bone, y towards the back
+      });
+      part(R, w, membrane, C.grey, { mat: once('fbSkin', () => new THREE.MeshLambertMaterial({ color: 0x5a4a52, side: THREE.DoubleSide })) });
+      swing(R, w, 0.75 * sd, 0, 'z');                                       // flap
+    }
+    bartekHead(R, look(R, joint(b, [0, 0, 0.05])), 0.9);
+    return R;
+  }
+
+  // Knogbartek: two short legs and two long arms; it runs bent over on its knuckles like an
+  // ape and rears up on its legs to bring its fists down on you
+  function knogBartek() {
+    const R = rig(), b = R.body, col = C.spider, WALK = 1.15;
+    for (const sd of [-1, 1]) {
+      const t = joint(b, [sd * 0.17, 0.8, 0]);
+      part(R, t, limb(0.1, 0.08, 0.42), col);
+      const k = joint(t, [0, -0.42, 0], [0.3, 0, 0]);
+      part(R, k, limb(0.08, 0.06, 0.4), col);
+      part(R, k, box(0.13, 0.06, 0.24), col, { p: [0, -0.4, 0.06] });
+      swing(R, t, 0.55, sd > 0 ? 0 : PI, 'x', { knee: k, kneeAmp: 0.7 });
+    }
+    const torso = joint(b, [0, 0.78, 0], [WALK, 0, 0]);
+    part(R, torso, trunk(0.25, 0.19, 0.78), col, { s: [1.15, 1, 0.9] });
+    for (const sd of [-1, 1]) {
+      const a = joint(torso, [sd * 0.3, 0.68, 0.02], [-WALK, 0, sd * 0.12]);  // hangs straight down while it runs
+      part(R, a, limb(0.09, 0.07, 0.55), col);
+      const f = joint(a, [0, -0.55, 0], [-0.15, 0, 0]);
+      part(R, f, limb(0.075, 0.06, 0.48), col);
+      part(R, f, ball(0.1), C.skin, { p: [0, -0.52, 0.02], s: [1, 0.8, 1.2] });   // the knuckles
+      arm(R, a, sd > 0 ? 0 : PI, 0.9);
+    }
+    const head = look(R, joint(torso, [0, 0.92, 0.08], [-WALK, 0, 0]));
+    bartekHead(R, head);
+    R.rear = { o: torso, walk: WALK, up: 0.05 };
+    return R;
+  }
+
+  // Bläckbartek: a big Bartek head floating low, with tentacles coming out of the back of it
+  // and trailing behind; the lowest ones drag along the floor
+  function blackBartek() {
+    const R = rig(), b = R.body, col = C.skin;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * PI * 2, down = Math.sin(a) < -0.3 ? 0.3 : 0;   // the upper ones splay up, the lower ones reach for the floor
+      let seg = joint(b, [Math.cos(a) * 0.22, 0.95 + Math.sin(a) * 0.22, -0.3], [1.45 + Math.sin(a) * 0.35 - down, 0, Math.cos(a) * 0.5]);
+      let r = 0.085;
+      for (let j = 0; j < 4; j++) {
+        part(R, seg, limb(r, r * 0.8, 0.3), col);
+        swing(R, seg, 0.28, i * 0.8 + j * 0.9, j % 2 ? 'x' : 'z', { wave: true });
+        seg = joint(seg, [0, -0.3, 0]);
+        r *= 0.78;
+      }
+      part(R, seg, spike(r, 0.12), C.ink, { r: [PI, 0, 0] });
+    }
+    const head = look(R, joint(b, [0, 0.95, 0]));
+    bartekHead(R, head, 1.7);
+    return R;
+  }
+
   // ---------- Bollboll (its own family) ----------
   // A big ball hopping on one leg with a three-toed foot. A grid is drawn over the top of the
   // ball; one big round eye, one dark scribbled eye, a wide mouth full of teeth, and a little
@@ -736,6 +835,11 @@ GS.Monsters = (function () {
     { id: 'dhi', name: 'Dhi', family: 2, build: dhi, hp: 35, speed: 3.8, dmg: 1, r: 0.6, h: 0.8, move: 'fly', from: 105, weight: 2, score: 20 },
     { id: 'spider', name: 'Spindelbartek', family: 'Bartek', build: spiderBartek, hp: 70, speed: 4.2, dmg: 1, r: 0.9, h: 1.3, move: 'walk', stride: 0.45, from: 50, weight: 2, score: 25, iris: 0x6b3e1f, fineHead: true },
     { id: 'snake', name: 'Ormbartek', family: 'Bartek', build: snakeBartek, hp: 90, speed: 3.4, dmg: 2, r: 0.6, h: 1.5, move: 'walk', stride: 0.6, from: 80, weight: 2, score: 30, iris: 0x6b3e1f, fineHead: true },
+    // only in the office (maps whose monster settings say office: true)
+    { id: 'hoppbartek', name: 'Hoppbartek', family: 'Bartek', build: hoppBartek, hp: 30, speed: 4.2, dmg: 1, r: 0.35, h: 0.95, move: 'hop', jump: 5.5, from: 10, weight: 2, score: 20, iris: 0x6b3e1f, fineHead: true, office: true },
+    { id: 'fladderbartek', name: 'Fladderbartek', family: 'Bartek', build: fladderBartek, hp: 35, speed: 4.0, dmg: 1, r: 0.5, h: 0.9, move: 'fly', from: 25, weight: 2, score: 25, iris: 0x6b3e1f, fineHead: true, office: true },
+    { id: 'knogbartek', name: 'Knogbartek', family: 'Bartek', build: knogBartek, hp: 110, speed: 4.4, dmg: 2, r: 0.55, h: 2.0, move: 'walk', stride: 0.7, lean: 0.3, from: 35, weight: 2, score: 30, iris: 0x6b3e1f, fineHead: true, office: true },
+    { id: 'blackbartek', name: 'Bläckbartek', family: 'Bartek', build: blackBartek, hp: 100, speed: 3.0, dmg: 2, r: 0.6, h: 1.5, move: 'walk', stride: 0.5, from: 45, weight: 2, score: 30, iris: 0x6b3e1f, fineHead: true, office: true },
     { id: 'roo', name: 'Roo', family: 'Roo', build: roo, hp: 70, speed: 3.8, dmg: 2, r: 0.5, h: 2.6, move: 'walk', stride: 0.6, from: 20, weight: 2, score: 20, iris: 0x5a7fa8, fineHead: true },
     { id: 'bollboll', name: 'Bollboll', family: 'Bollboll', build: bollboll, hp: 150, speed: 3.6, dmg: 2, r: 0.75, h: 1.7, move: 'hop', jump: 5, from: 40, weight: 2, score: 30, iris: 0x2d8a3a },
     { id: 'frot', name: 'Frot', family: 2, build: frot, hp: 300, speed: 1.8, dmg: 3, r: 1.0, h: 4.4, move: 'walk', lean: 0.6, from: 120, weight: 1, score: 60 },
@@ -909,7 +1013,8 @@ GS.Monsters = (function () {
     const v2 = new THREE.Vector2(), tmp = new THREE.Vector3();
     let spawnT = 0, navT = 0, moveSpeed = 1, detail = false;
     // Map tuning (Runthrough): density = more monsters, more often; maxHeight = tall ones are
-    // shrunk to fit through doors; boost = some families more common and earlier.
+    // shrunk to fit through doors; boost = some families more common and earlier;
+    // office = the office-only species (marked office: true) come too.
     const tune = map.monsters || {}, density = tune.density || 1, boost = tune.boost || {};
     const weightOf = s => s.weight * (boost[s.family] ? boost[s.family].weight : 1);
     const fromOf = s => boost[s.family] ? Math.min(s.from, boost[s.family].from) : s.from;
@@ -947,7 +1052,7 @@ GS.Monsters = (function () {
     function spawn(elapsed, target) {
       const at = spawnPlace(target);
       if (!at) return;
-      const pool = SPECIES.filter(s => elapsed >= fromOf(s));
+      const pool = SPECIES.filter(s => elapsed >= fromOf(s) && (!s.office || tune.office));
       let r = Math.random() * pool.reduce((a, s) => a + weightOf(s), 0), sp = pool[0];
       for (const s of pool) if ((r -= weightOf(s)) < 0) { sp = s; break; }
       const R = build(sp, detail), k = scaleOf(sp);
@@ -1049,6 +1154,15 @@ GS.Monsters = (function () {
     function animate(m, dt, target) {
       const R = m.R, sp = m.sp;
       const moved = m.moved;
+      // Knogbartek: bent over on its knuckles while it runs, upright while it strikes;
+      // the head keeps facing forward
+      if (R.rear) {
+        m.rear = (m.rear || 0) + ((m.state === 'attack' ? 1 : 0) - (m.rear || 0)) * Math.min(1, dt * 8);
+        const a = R.rear.walk + (R.rear.up - R.rear.walk) * m.rear;
+        R.rear.o.rotation.x = a;
+        R.head.userData.base.x = -a;
+        if (!m.hd) R.head.rotation.x = -a;
+      }
       if (sp.move === 'fly') { m.walk += dt * 14; m.gait = 1; }
       else {
         m.walk += m.moved / ((sp.stride || sp.h * 0.3) * m.k);
