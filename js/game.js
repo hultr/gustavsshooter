@@ -230,7 +230,7 @@
   }
   function scoreKill(r) {
     if (r.killed) {
-      const pts = Math.round(r.m.sp.score * (r.head ? 1.5 : 1));
+      const pts = Math.round(r.m.sp.score * (r.head ? 1.5 : 1) * pointsX());
       stats.score += pts; stats.kills++; if (r.head) stats.heads++;
       popup(`${r.head ? 'HEADSHOT! ' : ''}${r.m.sp.name} +${pts}`);
       $('score').textContent = stats.score;
@@ -546,7 +546,7 @@
     }
     showMenu('The monsters got you!',
       (run ? `You got <b>${wayDone()}%</b> of the way in <b>${t}</b>` : `Survived <b>${t}</b> · Wave ${wave}`) +
-      `<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}<br>` +
+      `<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}${speedNote()}<br>` +
       `Monsters killed: ${stats.kills} · Headshots: ${stats.heads}` +
       (record ? '' : `<br>Best: ${best.score} (${clock(best.time)})`), false);
     $('startBtn').textContent = 'PLAY AGAIN';
@@ -557,7 +557,7 @@
   // Runthrough: out through the revolving door. Bonus for getting out, more the faster it went.
   function escaped() {
     GS.Audio.end();
-    const bonus = 500 + Math.max(0, Math.round((300 - elapsed) * 5));
+    const bonus = Math.round((500 + Math.max(0, (300 - elapsed) * 5)) * pointsX());
     stats.score += bonus;
     $('score').textContent = stats.score;
     let best = { score: 0, time: 0 };
@@ -565,7 +565,7 @@
     const record = stats.score > best.score;
     if (record) try { localStorage.setItem('runthroughBest', JSON.stringify({ score: stats.score, time: elapsed })); } catch (e) {}
     showMenu('You made it out!',
-      `Time: <b>${clock(elapsed)}</b> · Exit bonus +${bonus}<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}<br>` +
+      `Time: <b>${clock(elapsed)}</b> · Exit bonus +${bonus}<br>Score: <b>${stats.score}</b>${record ? ' – new record!' : ''}${speedNote()}<br>` +
       `Monsters killed: ${stats.kills} · Headshots: ${stats.heads}`, false);
     $('startBtn').textContent = 'PLAY AGAIN';
     offerScore({ score: stats.score, time: elapsed, wave: 100 });
@@ -641,10 +641,15 @@
   }
   document.querySelectorAll('.mapBtn').forEach(b => b.addEventListener('click', () => { if (b.dataset.map !== mapId) setMap(b.dataset.map); }));
 
-  // Monster speed setting (movement only), saved between visits
+  // Monster speed setting (movement), saved between visits. It also multiplies the points on
+  // the monster maps: 160 % gives x1.6 for every kill and the exit bonus.
+  let speedPct = 100;
+  const pointsX = () => (horde ? speedPct / 100 : 1);
+  const speedNote = () => (speedPct !== 100 ? ` (monster speed ${speedPct}%: points ×${(speedPct / 100).toFixed(1)})` : '');
   function setMonsterSpeed(pct) {
+    speedPct = pct = Math.max(40, Math.min(200, pct));
     $('speedRange').value = pct;
-    $('speedVal').textContent = pct + '%';
+    $('speedVal').textContent = `${pct}% · points ×${(pct / 100).toFixed(1)}`;
     Object.values(hordes).forEach(h => h.setSpeed(pct / 100));
     try { localStorage.setItem('monsterSpeed', pct); } catch (e) {}
   }

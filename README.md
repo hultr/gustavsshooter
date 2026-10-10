@@ -9,7 +9,8 @@ Pick a map in the menu:
   Headshots do double damage, family 2 is poisonous. Every family bleeds its own colour
   (purple, green, yellow, blue, orange, teal, magenta, white, black – never red).
   You heal half a heart at a time after a while without getting hit.
-  The menu has a **Monster speed** slider (40–160 %), and every monster gets its own
+  The menu has a **Monster speed** slider (40–200 %) that also multiplies the points (160 % →
+  ×1.6 for every kill and the Runthrough exit bonus), and every monster gets its own
   random pace, so some are quicker than others.
 - **Runthrough** – run through Office X, a big office building, from one entrance to the
   other (about 200 m): café, turnstiles, the corridor between the team areas, a garage, a stair
