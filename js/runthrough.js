@@ -1,10 +1,12 @@
 // Runthrough: Office X, built from the floor plans, the photos and the walk-through video of
 // a real office (kept out of the repo in assets/office/; floorplan.svg marks where each view was
-// taken). You start outside the main entrance (HUVUDENTRÉ) and have to get out through the
-// revolving door at the far end of the South building. The way the video goes: revolving door →
-// café → turnstiles → corridor between the team areas → the garage (the concept lab, where the
-// video cuts, so it's guessed from the plan) → the stair hall ("same feature" on the plan) → the
-// hall of two-storey room pods in the South building → turnstiles → reception → revolving door.
+// taken; positions are measured on the plans). You start outside the main entrance
+// (HUVUDENTRÉ) and have to get out through the revolving door at the far end of the South
+// building. The way the video goes: revolving door → café, down the lane between the counter and
+// the seating steps → turnstiles → the corridor, squeezing between the WC blocks of the pod
+// column by the café → the Concept lab (the garage, where the video cuts, so its inside is
+// guessed) → the stair hall ("same feature" on the plan) → the passage through the South
+// building past its two-storey room pods → turnstiles → reception → revolving door.
 // Rolling sign stands, mail carts and scissor lifts block the obvious way in a few places, so
 // you have to cut through a room or round the side. Monsters come out of the rooms along the
 // way and from the open team areas at the sides.
@@ -115,6 +117,15 @@ GS.Runthrough = (function () {
       g.fillStyle = 'rgba(120,95,60,0.7)'; g.fillRect(x0, 0, 3, s);
     }
     g.fillStyle = 'rgba(120,95,60,0.6)'; g.fillRect(0, 0, s, 3);
+  }), 2.4);
+  // Beige acoustic wall panels (wood wool), 1.2 x 0.6 m with dark seams: the pod and WC walls
+  // in the video (0:17, 0:25-0:31)
+  const panelTex = () => tex(canvas(256, 256, (g, s) => {
+    g.fillStyle = '#d4c6ad'; g.fillRect(0, 0, s, s);
+    speckle(g, s, s, 9000, 196, 45, 0.35, 1.6);
+    g.fillStyle = 'rgba(118,102,80,0.7)';
+    for (let i = 0; i < 2; i++) g.fillRect(i * 128, 0, 2, s);
+    for (let j = 0; j < 4; j++) g.fillRect(0, j * 64, s, 2);
   }), 2.4);
   const plainTex = (base, n, spread, mu) => tex(canvas(128, 128, (g, s) => {
     g.fillStyle = rgb(base[0], base[1], base[2]); g.fillRect(0, 0, s, s);
@@ -318,6 +329,11 @@ GS.Runthrough = (function () {
       cardboard: lam({ color: 0xa87c4f }),
       kraft: lam({ color: 0xcaa574 }),
       liftBlue: lam({ color: 0x1f63c6 }),
+      panel: lam({ map: panelTex() }),
+      teal: lam({ color: 0x3d5e5a }),
+      lime: lam({ color: 0xc8c47e }),
+      paleBlue: offset(lam({ color: 0x8fb2c0 })),
+      curtain: new THREE.MeshLambertMaterial({ color: 0x1a1a1a, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }),
     };
 
     // ---------- Geometry: everything static is merged per material and per 32 m strip ----------
@@ -378,7 +394,7 @@ GS.Runthrough = (function () {
     // A room: four walls, a roof, a ceiling light, a table, a spawn point.
     // doors: { n, s, e, w } lists of door centres
     function room(x0, z0, x1, z1, o = {}) {
-      const h = o.h || 3.6, m = o.m || M.wood, d = o.doors || {};
+      const h = o.h || 3.6, m = o.m || M.panel, d = o.doors || {};
       // walls on the outer walls, or shared with a room built before (o.skip), are left out
       const skip = o.skip || [], has = k => !skip.includes(k);
       if (o.walls !== false) {
@@ -680,25 +696,32 @@ GS.Runthrough = (function () {
 
     // =========================================================================================
     // The main building (Plan 1): x 0..108, z 0..47.5. Brick outside, ceilings at 6.5 m.
-    const H1 = 6.5, OUT = 9;
-    box(M.tile, 46.3, -0.1, 0, 61.5, 0, 19);           // lobby and café
-    box(M.tile, 0, -0.1, 19, 72, 0, 29);               // corridor and the collaboration strips
-    box(M.office, 0, -0.1, 0, 46.3, 0, 19);
-    box(M.office, 61.5, -0.1, 0, 72, 0, 19);
-    box(M.office, 0, -0.1, 29, 72, 0, 47.5);
-    box(M.concrete, 72, -0.1, 0, 96.5, 0, 47.5);       // garage and its labs
-    box(M.tile, 96.5, -0.1, 0, 108, 0, 47.5);
-    box(M.carpet, 0.5, 0, 22.6, 71.5, 0.01, 24.4);     // dark runner (video 0:16)
+    // Measured on the plan: the café x 46.5..57.6, the corridor z 23.4..25.6 with collaboration
+    // strips either side, pod columns at x 10.7, 30.8 and 56, the Concept lab from x 72.6.
+    const H1 = 6.5, OUT = 9, HG = 9;
+    box(M.tile, 46.5, -0.1, 0, 57.6, 0, 18.6);         // lobby and café
+    box(M.office, 0, -0.1, 0, 46.5, 0, 47.5);
+    box(M.office, 46.5, -0.1, 18.6, 72.6, 0, 47.5);
+    box(M.office, 57.6, -0.1, 0, 72.6, 0, 18.6);
+    box(M.concrete, 72.6, -0.1, 0, 101.5, 0, 25.6);    // the Concept lab
+    box(M.concrete, 72.6, -0.1, 25.6, 97, 0, 35.8);
+    box(M.tile, 72.6, -0.1, 35.8, 108, 0, 47.5);       // the labs round it and the stair hall
+    box(M.tile, 97, -0.1, 25.6, 108, 0, 35.8);
+    box(M.tile, 101.5, -0.1, 0, 108, 0, 25.6);
+    box(M.carpet, 0.2, 0, 23.4, 72.4, 0.01, 25.6);     // dark carpet along the corridor (video 0:13-0:19)
+    box(M.carpet, 46.6, 0, 18.6, 50.6, 0.01, 23.4);    // and from the gates to it
 
     wallZ(M.brick, 0, 0, 108, OUT, [[53.7, 3.0, 2.8]]);
     wallZ(M.brick, 47.5, 0, 108, OUT);
     wallX(M.brick, 0, 0, 47.5, OUT);
-    wallX(M.brick, 108, 0, 47.5, OUT, [[23.5, 4.0, 3.4]]);
-    windowsZ(0, 2, 106, [[49, 58.5], [79, 89]]);
+    wallX(M.brick, 108, 0, 47.5, OUT, [[22.3, 2.8, 3.0]]);
+    windowsZ(0, 2, 106, [[49, 58.5], [72, 76.5], [79, 89]]);
     windowsZ(47.5, 2, 106);
     windowsX(0, 2, 46);
-    ceiling(0, 0, 72, 47.5, H1);
-    ceiling(96.5, 0, 108, 47.5, H1);
+    ceiling(0, 0, 72.6, 47.5, H1);
+    ceiling(101.5, 0, 108, 25.6, H1);
+    ceiling(97, 25.6, 108, 35.8, H1);
+    ceiling(72.6, 35.8, 108, 47.5, H1);
     for (let x = 6; x < 70; x += 12) box(M.skylight, x - 0.8, H1 - 0.02, 1.5, x + 0.8, H1, 46);   // skylights (view L)
 
     // Outside the main entrance: canopy, COMPANY letters (view J) and the revolving door
@@ -706,127 +729,227 @@ GS.Runthrough = (function () {
     box(M.dark, 50.7, 2.95, -2.2, 56.7, 3.2, 0);
     sign(letters('COMPANY', '#f4f4f4'), 9.6, 1.3, 1400, 190, 53.7, 5.3, -0.12, PI, true);
 
-    // --- Lobby and café (views A, B; video 0:04-0:12) ---
-    wallX(M.wood, 46.3, 0, 19, H1, [12.5]);
-    wallX(M.plaster, 61.5, 0, 19, H1, [13.6]);
-    const mural = new THREE.Mesh(new THREE.PlaneGeometry(10, 4.6), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(muralCanvas()) }));
-    mural.position.set(61.38, 3.2, 6.4); mural.rotation.y = -PI / 2;
+    // Coloured acoustic tiles, 1.2 x 0.6 m, on a wall face at x = c (alongX false) or z = c,
+    // d thick towards the room (video 0:07-0:12)
+    const tileMats = [0x1f3550, 0x2c5aa0, 0x6c7178, 0x7d5f72, 0xcfc4ad, 0xb5ae78].map(c => lam({ color: c }));
+    function tiles(alongX, c, a0, a1, y0, y1, d) {
+      const [c0, c1] = d > 0 ? [c, c + d] : [c + d, c];
+      for (let a = a0; a < a1 - 0.1; a += 1.2) for (let y = y0; y < y1 - 0.1; y += 0.6) {
+        const m = tileMats[(rnd() * tileMats.length) | 0], b = Math.min(a + 1.18, a1), t = Math.min(y + 0.58, y1);
+        if (alongX) box(m, a, y, c0, b, t, c1); else box(m, c0, y, a, c1, t, b);
+      }
+    }
+    // The big X-shaped LED fittings over the café (video 0:09-0:12)
+    function xLamp(x, z, y, s) {
+      for (const a of [0.5, -0.5]) add(M.lamp, new THREE.BoxGeometry(s, 0.04, 0.06).rotateY(a).translate(x, y, z));
+      cyl(M.dark, x, y, z, 0.01, 0.01, H1 - y, 3);
+    }
+
+    // --- Lobby and café (views A, B; video 0:04-0:13). In through the revolving door, the tables
+    // are ahead, the counter on the right; the lane between the counter and the seating steps
+    // leads to the gates. ---
+    wallX(M.dark, 46.5, 0, 18.6, H1);
+    wallX(M.plaster, 57.6, 0, 19.5, H1, [10.3]);         // door to the Innovation Garage
+    tiles(false, 46.6, 2, 18.4, 3.6, 6.2, 0.04);
+    add(M.red, new THREE.CylinderGeometry(0.5, 0.5, 0.04, 24).rotateZ(PI / 2).translate(46.66, 4.3, 7.5));   // the bar's round sign
+    const mural = new THREE.Mesh(new THREE.PlaneGeometry(8, 4.6), new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(muralCanvas()) }));
+    mural.position.set(57.48, 3.4, 5); mural.rotation.y = -PI / 2;
     scene.add(mural); shootables.push(mural);
-    // café counter on the right as you come in, with glass displays and a black hood
-    box(M.dark, 46.4, 0, 2.5, 47.6, 1.05, 9.5, true);
-    box(M.steel, 46.4, 1.05, 2.5, 47.7, 1.09, 9.5);
-    box(M.glass, 46.6, 1.09, 3, 47.5, 1.55, 6.5);
-    for (let z = 3.2; z < 6.4; z += 0.5) box([M.orange, M.green, M.white, M.red][(rnd() * 4) | 0], 46.8, 1.09, z, 47.2, 1.2, z + 0.3);
-    for (let z = 7; z < 9.3; z += 0.7) box(M.black, 46.6, 1.09, z, 47.1, 1.6, z + 0.45);
-    box(M.dark, 46.4, 2.7, 2.5, 47.9, 3.4, 9.5);
-    box(M.lamp, 46.5, 2.68, 2.6, 47.8, 2.7, 9.4);
-    // the orange bench on the left (video 0:06)
-    box(M.orange, 51.4, 0, 3, 52.0, 0.45, 10);
-    box(M.orange, 51.85, 0.45, 3, 52.05, 1.1, 10, true);
-    // round black café tables with black chairs
-    for (const x of [55.6, 58.3, 60.8]) for (const z of [3.8, 6.6, 9.4]) {
-      cyl(M.black, x, 0.72, z, 0.45, 0.45, 0.04, 16);
+    // the long black counter with glass displays, coffee machines and a black hood over it
+    box(M.dark, 46.6, 0, 2.0, 48.4, 1.05, 12.4, true);
+    box(M.steel, 47.15, 1.05, 2.0, 48.45, 1.09, 12.4);
+    box(M.glass, 47.6, 1.09, 2.5, 48.4, 1.55, 7.5);
+    for (let z = 2.7; z < 7.3; z += 0.5) box([M.orange, M.green, M.white, M.red][(rnd() * 4) | 0], 47.7, 1.09, z, 48.2, 1.2, z + 0.3);
+    for (let z = 8; z < 12; z += 0.7) box(M.black, 47.3, 1.09, z, 47.8, 1.6, z + 0.45);
+    box(M.dark, 47.0, 2.7, 2.0, 48.6, 3.4, 12.4);
+    box(M.lamp, 47.1, 2.68, 2.1, 48.5, 2.7, 12.3);
+    // the lime-green coffee and water counter by the gates (video 0:11)
+    box(M.lime, 46.6, 0, 13.2, 47.3, 0.95, 17.6, true);
+    box(M.black, 46.6, 0.95, 13.2, 47.35, 0.99, 17.6);
+    for (const z of [13.8, 15.2, 16.6]) box(M.steel, 46.7, 0.99, z, 47.1, 1.4, z + 0.45);
+    // the bench with its orange back to the counter, black tables in front (video 0:06)
+    box(M.oak, 50.2, 0, 2.5, 50.9, 0.38, 10.5, true);
+    box(M.white, 50.2, 0.38, 2.5, 50.9, 0.47, 10.5);
+    box(M.orange, 50.0, 0, 2.5, 50.2, 1.3, 10.5, true);
+    for (const z of [3.5, 6.5, 9.5]) {
+      box(M.black, 51.0, 0.72, z - 0.6, 51.8, 0.76, z + 0.6);
+      cyl(M.black, 51.4, 0, z, 0.04, 0.04, 0.72, 6);
+      collide(51.0, z - 0.6, 51.8, z + 0.6, 0.76);
+    }
+    // round white tables on black legs, black chairs, planters by the wall (video 0:05)
+    for (const x of [52.9, 55.6]) for (const z of [4.0, 6.7, 9.2]) {
+      cyl(M.white, x, 0.72, z, 0.45, 0.45, 0.04, 16);
       cyl(M.black, x, 0, z, 0.05, 0.05, 0.72, 6);
+      cyl(M.black, x, 0, z, 0.3, 0.3, 0.03, 12);
       collide(x - 0.35, z - 0.35, x + 0.35, z + 0.35, 0.76);
       chair(x - 0.75, z, 'e'); chair(x + 0.75, z, 'w');
     }
-    // the wooden seating steps (view B, video 0:04): you can climb them
-    for (let i = 0; i < 5; i++) {
-      box(M.oak, 52.5, 0, 11.5 + i * 0.9, 58.5, 0.38 * (i + 1), 16, true);
-      if (i % 2) for (let x = 53; x < 58; x += 1.6) box(M.cushion, x, 0.38 * (i + 1), 11.6 + i * 0.9, x + 0.9, 0.38 * (i + 1) + 0.1, 11.6 + i * 0.9 + 0.6);
+    for (const z of [5.35, 7.95]) {
+      box(M.dark, 56.75, 0, z - 0.3, 57.35, 0.7, z + 0.3, true);
+      for (let i = 0; i < 3; i++) ball(M.leaf, 57.05 + rr(-0.2, 0.2), 0.85, z + rr(-0.2, 0.2), 0.25);
     }
-    box(M.orange, 52.5, 0, 16, 58.5, 2.4, 19, true);     // the dish return ("Disk")
-    box(M.dark, 58.5, 0, 16, 61.5, 3.0, 19, true);       // kitchen
-    plant(60.5, 11.2, 1.2); plant(47.2, 11, 1.1);
-    // turnstiles into the office, with coloured acoustic panels above (video 0:10-0:12)
-    turnstiles(17, 46.4, 52.5, 49.0, true);
-    [[0x2c5aa0, 46.4, 15.6], [0x9a6f86, 48.4, 15.6], [0x6c7178, 50.4, 15.6], [0x1f3550, 47.4, 17.6], [0xb18a96, 49.4, 17.6]]
-      .forEach(([c, x, z]) => box(lam({ color: c }), x, 3.4, z, x + 2, 3.5, z + 2));
-    box(M.dark, 46.3, 2.35, 19.1, 52.5, 3.65, 19.25);
-    sign(officeSign, 3.6, 1.2, 600, 200, 49.4, 3.0, 19.05, PI);   // over the gates
+    // the wooden seating steps (view B, video 0:04-0:09): you can climb them
+    for (let i = 0; i < 5; i++) {
+      box(M.oak, 50.6, 0, 11.8 + i * 0.68, 57.5, 0.38 * (i + 1), 15.2, true);
+      if (i % 2) for (let x = 51.1; x < 56.8; x += 1.6) box(M.cushion, x, 0.38 * (i + 1), 11.9 + i * 0.68, x + 0.9, 0.38 * (i + 1) + 0.1, 11.9 + i * 0.68 + 0.5);
+    }
+    // behind them: the wood-clad dish return with its hatch to the lane (video 0:10-0:11), the
+    // kitchen, planters on top
+    box(M.wood, 50.6, 0, 15.2, 55.0, 3.4, 18.6, true);
+    box(M.dark, 50.55, 0.9, 16.0, 50.62, 1.7, 17.4);
+    box(M.steel, 50.3, 0.9, 16.0, 50.6, 0.94, 17.4);
+    box(M.dark, 55.0, 0, 15.2, 57.6, 3.4, 19.5, true);
+    box(M.dark, 50.7, 3.4, 15.3, 57.5, 3.7, 15.9);
+    for (let x = 51; x < 57.3; x += 0.7) ball(M.leaf, x, 3.85, 15.6, rr(0.25, 0.35));
+    xLamp(49.3, 9.5, 5.2, 4.5); xLamp(48.6, 15.4, 5.2, 4.5);
+    plant(56.9, 1.2, 1.2);
+    // the gates into the office (video 0:11-0:13): four steel cabinets under a bulkhead of
+    // coloured tiles, the wide gate by the dish return
+    turnstiles(18.3, 46.6, 50.6, 49.2, true);
+    box(M.dark, 46.5, 2.6, 18.2, 50.6, 4.6, 18.45);
+    tiles(true, 18.2, 46.5, 50.6, 2.6, 4.6, -0.04);
+    sign(officeSign, 3.0, 1.0, 600, 200, 48.55, 3.6, 18.47, 0);   // on the corridor side
+    // past the gates on the left: a white wall, then a stair up along the corridor (video 0:13-0:14)
+    box(M.white, 50.6, 0, 18.6, 55.5, 3.4, 20.3, true);
+    for (let i = 0; i < 8; i++) box(M.plaster, 50.8 + i * 0.55, 0, 20.3, 55.5, 0.38 * (i + 1), 22.2, true);
+    box(M.glass, 51.35, 0.4, 22.15, 55.5, 4.1, 22.22);
+    box(M.black, 55.0, 0, 22.5, 55.45, 0.9, 22.95);                 // the cleaning robot's charger (video 0:16)
+    box(M.led, 54.98, 0.4, 22.6, 55.0, 0.75, 22.68);
+    plant(54.4, 22.95, 1.1);
 
-    // --- The north side: team areas and meeting-room pods between the columns ---
-    // A pod: a stack of rooms along z; doors alternate east/west, the end room opens to the corridor
-    // through: the end room also has a door on that side (a way round a blocked corridor)
-    function podL(x0, x1, z0, z1, toCorridor, through) {
-      const n = 4, step = (z1 - z0) / n, cx = (x0 + x1) / 2;
+    // --- Pod columns: meeting rooms stacked along z, a stair-and-lift lobby, and a WC block on
+    // each side of the corridor, so the corridor squeezes between them (video 0:17-0:19) ---
+    function podRooms(x0, x1, z0, z1, n) {   // doors alternate east/west, glass on the other side
+      const step = (z1 - z0) / n;
       for (let i = 0; i < n; i++) {
-        const a = z0 + i * step, b = a + step, end = toCorridor === 's' ? i === n - 1 : i === 0;
-        const doors = end ? { [toCorridor]: [cx], ...(through ? { [through]: [(a + b) / 2] } : {}) } : (i % 2 ? { w: [(a + b) / 2] } : { e: [(a + b) / 2] });
-        room(x0, a, x1, b, { doors, glass: end ? null : [i % 2 ? 'e' : 'w', a + 0.6, b - 0.6] });
+        const a = z0 + i * step, b = a + step, d = i % 2 ? 'w' : 'e';
+        room(x0, a, x1, b, { doors: { [d]: [(a + b) / 2] }, glass: [d === 'e' ? 'w' : 'e', a + 0.6, b - 0.6] });
       }
     }
-    podL(10.7, 16.5, 0, 19, 's');
-    podL(31, 37, 0, 19, 's');
-    desks(0, 10.7, 0, 19, 'n');
-    desks(16.5, 31, 0, 19, 'n');
-    desks(37, 46.3, 0, 19, 'n');
-
-    // --- The corridor (video 0:14-0:18): green sofas, ducts, LED lines, a cleaning robot ---
-    for (let x = 38.5; x < 45; x += 3.2) {
-      box(M.green, x, 0, 19.3, x + 2.4, 0.45, 20.2);
-      box(M.green, x, 0.45, 19.3, x + 2.4, 0.95, 19.55, true);
-      cyl(M.white, x + 1.2, 0, 21.0, 0.35, 0.35, 0.42, 14);
+    // A WC block: solid, beige panels, with doors and a radiator drawn on the corridor face
+    function wcBlock(x0, z0, x1, z1, face) {
+      box(M.panel, x0, 0, z0, x1, 3.4, z1, true);
+      box(M.plaster, x0 - 0.05, 3.4, z0 - 0.05, x1 + 0.05, 3.5, z1 + 0.05);
+      if (!face) return;
+      const f = face === 'n' ? z0 - 0.03 : z1, g = f + 0.03;
+      for (const x of [x0 + 0.6, x1 - 1.5]) { box(M.oak, x, 0, f, x + 0.9, 2.1, g); box(M.white, x + 0.3, 2.2, f, x + 0.6, 2.4, g); }
+      box(M.white, x0 + 2.0, 0.15, face === 'n' ? f - 0.05 : g, x1 - 2.0, 0.75, face === 'n' ? f : g + 0.05);
     }
-    for (const x of [20, 25, 41, 46, 52]) {
+    // a lobby across the column, open east-west, with the spiral stair in a corner
+    function podColumn(x0, x1, north, southWC = true) {
+      if (north) {
+        podRooms(x0, x1, 0, 12, 3);
+        spiral(x0 + 0.6, 12.6);
+        room(x0, 15, x1, 20.3, { doors: { w: [17.6], e: [17.6] }, table: false });
+        wcBlock(x0, 20.3, x1, 23.4, 's');
+      }
+      if (southWC) wcBlock(x0, 25.6, x1, 29.6, 'n');
+      spiral(x0 + 0.6, 32.0);
+      podRooms(x0, x1, 32.6, 47.5, 4);
+    }
+    podColumn(10.7, 15.8, true);
+    podColumn(30.8, 35.8, true);
+    podColumn(56, 61.5, false, false);
+    // the column by the café: WCs north of the corridor, with a teal niche for recycling and one
+    // for coffee where the passage starts (video 0:17-0:18)
+    wcBlock(55.5, 19.5, 56.2, 23.4, null);
+    wcBlock(56.2, 19.5, 58.4, 22.0, null);
+    wcBlock(58.4, 19.5, 61.5, 23.4, 's');
+    box(M.plaster, 56.2, 3.4, 22.0, 58.4, 3.5, 23.4);
+    box(M.teal, 56.2, 0, 21.97, 58.4, 3.4, 22.0); box(M.teal, 56.2, 0, 22.0, 56.23, 3.4, 23.4); box(M.teal, 58.37, 0, 22.0, 58.4, 3.4, 23.4);
+    box(M.paleBlue, 56.2, 0, 22.0, 58.4, 0.015, 25.6);
+    for (const x of [56.4, 56.9, 57.4]) box(M.white, x, 0, 22.05, x + 0.4, 0.95, 22.5, true);   // recycling bins
+    box(M.steel, 57.9, 0.2, 22.05, 58.35, 0.9, 22.9);                                           // trolley
+    wcBlock(56, 25.6, 56.2, 29.6, null);
+    wcBlock(58.4, 25.6, 61.5, 29.6, 'n');
+    wcBlock(56.2, 27.0, 58.4, 29.6, null);
+    box(M.plaster, 56.2, 3.4, 25.6, 58.4, 3.5, 27.0);
+    box(M.teal, 56.2, 0, 27.0, 58.4, 3.4, 27.03); box(M.teal, 56.2, 0, 25.6, 56.23, 3.4, 27.0); box(M.teal, 58.37, 0, 25.6, 58.4, 3.4, 27.0);
+    box(M.dark, 56.3, 0, 26.4, 58.3, 0.92, 27.0, true);                                         // coffee counter
+    for (const x of [56.5, 57.4]) box(M.black, x, 0.92, 26.55, x + 0.5, 1.6, 26.95);
+    // open team areas between the columns
+    desks(0, 10.7, 0, 20.3, 'n');
+    desks(15.8, 30.8, 0, 20.3, 'n');
+    desks(35.8, 46.5, 0, 20.3, 'n');
+    desks(15.8, 30.8, 29.6, 47.5, 's');
+    desks(35.8, 56, 29.6, 47.5, 's');
+    desks(61.5, 72.6, 29.6, 47.5, 's');
+
+    // --- The corridor and its collaboration strips: ducts, LED lines, high tables, a cleaning robot ---
+    for (const x of [20, 25, 41, 44, 64.5, 68.5]) {
       cyl(M.white, x, 0, 27.6, 0.5, 0.5, 1.05, 16);
       cyl(M.steel, x, 1.05, 27.6, 0.55, 0.55, 0.03, 16);
       collide(x - 0.4, 27.2, x + 0.4, 28.0, 1.08);
     }
-    ductX(0.5, 71.5, 5.6, 23.5, 0.45);
-    for (let x = 3; x < 70; x += 6) box(M.dark, x, 5.15, 23.4, x + 0.1, H1, 23.6);
-    for (let x = 4; x < 70; x += 9) plant(x, 21.3, 1.1);
+    for (const [x0, x1] of [[19, 24], [39, 43.5]]) {
+      box(M.white, x0, 1.0, 21.3, x1, 1.05, 22.2);
+      box(M.grey, x0 + 0.2, 0, 21.6, x1 - 0.2, 1.0, 21.9, true);
+    }
+    ductX(0.5, 72.4, 5.6, 24.5, 0.45);
+    for (let x = 3; x < 72; x += 6) box(M.dark, x, 5.15, 24.4, x + 0.1, H1, 24.6);
+    for (const x of [4, 8, 26, 37, 45, 63, 70]) plant(x, 22.9, 1.1);
     const robot = new THREE.Group();
     robot.add(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.38, 0.55, 18).translate(0, 0.3, 0), M.dark));
     robot.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.06).translate(0.05, 0.6, 0), M.led));
-    robot.position.set(10, 0, 25.4);
+    robot.position.set(10, 0, 24.5);
     scene.add(robot);
+    // the lounge across the corridor from the gates (video 0:14-0:15): green sofas round little
+    // oak tables inside a curved black mesh curtain, white storage and an orange coat stand
+    box(M.green, 48.2, 0, 27.6, 52.8, 0.42, 28.4, true);
+    box(M.green, 48.2, 0.42, 28.15, 52.8, 0.85, 28.45, true);
+    for (const x of [47.9, 52.4]) { box(M.green, x, 0, 26.3, x + 0.7, 0.42, 27.6, true); box(M.green, x < 50 ? x : x + 0.45, 0.42, 26.3, x < 50 ? x + 0.25 : x + 0.7, 0.85, 27.6); }
+    for (const [x, z] of [[49.4, 26.9], [50.6, 26.6], [51.8, 26.9]]) { cyl(M.oak, x, 0.48, z, 0.32, 0.32, 0.04, 14); cyl(M.oak, x, 0, z, 0.04, 0.04, 0.48, 6); }
+    add(M.curtain, new THREE.CylinderGeometry(3.4, 3.4, 3.3, 28, 1, true, -PI / 2, PI).translate(50.5, 1.75, 26.0));
+    box(M.dark, 47.0, 3.4, 25.9, 54.0, 3.45, 29.5);
+    box(M.white, 54.3, 0, 26.0, 55.6, 1.25, 27.8, true);
+    for (let i = 0; i < 3; i++) ball(M.leaf, 54.95 + rr(-0.3, 0.3), 1.4, 26.4 + i * 0.55, 0.28);
+    cyl(M.orange, 54.6, 0, 28.6, 0.22, 0.22, 0.03, 12); cyl(M.orange, 54.6, 0, 28.6, 0.025, 0.025, 1.8, 6);
+    ball(M.red, 54.75, 1.35, 28.6, 0.2, 2);
 
-    // --- The south side: VR room and driving simulator, pods, team areas ---
-    room(0, 29, 10.7, 38, { h: 4, skip: ['e'], doors: { n: [5], s: [5] }, roofM: M.pink });
-    room(0, 38, 10.7, 47.5, { h: 4, skip: ['n', 'e'], roofM: M.pink, table: false });
-    cyl(M.purple, 5.3, 0, 43, 2.0, 2.0, 0.3, 24);      // the simulator's round platform
-    podL(10.7, 16.5, 29, 47.5, 'n');
-    podL(31, 37, 29, 47.5, 'n');
-    podL(56.3, 62, 29, 47.5, 'n', 'e');
-    desks(16.5, 31, 29, 47.5, 's');
-    desks(37, 56.3, 29, 47.5, 's');
-    desks(62, 72, 29, 47.5, 's');
-    // the Startup incubator banner (view L)
-    sign(incubatorSign, 1.8, 2.7, 300, 450, 66.5, 4.6, 33, -PI / 2);
-    box(M.steel, 66.45, 5.95, 32, 66.55, 6.0, 34);
-
-    // --- Innovation Garage (orange on the plan) ---
-    wallZ(M.plaster, 19, 61.5, 72, H1, [66.7]);
-    for (let x = 63.5; x < 71; x += 3.4) {
+    // --- Innovation Garage (orange on the plan): workshop tables, teal lockers on the corridor side ---
+    wallZ(M.plaster, 19.5, 57.6, 61.5, H1);
+    wallX(M.plaster, 61.5, 19.5, 20.5, H1);
+    wallZ(M.plaster, 20.5, 61.5, 72.6, H1, [66.7]);
+    for (let x = 59.5; x < 71; x += 3.4) {
       box(M.oak, x, 0.85, 3, x + 1.6, 0.9, 13);
       box(M.grey, x + 0.1, 0, 3, x + 1.5, 0.85, 13, true);
       for (let z = 4; z < 13; z += 2.5) box([M.orange, M.blue, M.white][(rnd() * 3) | 0], x + 0.3, 0.9, z, x + 1.2, 1.3, z + 0.7);
     }
-    box(M.white, 62, 0, 1, 62.1, 2.2, 6);   // whiteboard
-    spawnAt(62.5, 14.5, 71, 17.8);
-    spawnAt(62.5, 0.6, 71, 2.6);
+    box(M.white, 57.7, 0, 1, 57.8, 2.2, 6);   // whiteboard
+    spawnAt(58.5, 14.5, 71.5, 19.5);
+    spawnAt(58.5, 0.6, 71.5, 2.6);
+    for (const [x0, x1] of [[62, 66.0], [67.4, 71.6]]) {
+      box(M.teal, x0, 0, 20.62, x1, 0.9, 21.2, true);
+      for (let x = x0 + 0.3; x < x1; x += 0.6) ball(M.leaf, x, 1.05, 20.9, rr(0.2, 0.3));
+    }
 
-    // --- The garage: Concept lab, x 72..96.5, z 0..36.5, 9 m high (the video cuts here) ---
-    const HG = 9;
-    wallX(M.plaster, 72, 0, 47.5, HG, [16.3, [23.5, 5, 4.6]]);
-    wallX(M.plaster, 96.5, 0, 47.5, HG, [4.6, [22.75, 6.0, 4.6], 42]);
-    wallZ(M.plaster, 36.5, 72, 96.5, HG, [[76.3, 2.6, 3], [84.5, 2.6, 3], [92.5, 2.6, 3]]);
-    box(M.ceiling, 72, HG, 0, 96.5, HG + 0.1, 36.5);
+    // --- The Concept lab (the garage; the video cuts at its door, so the inside is guessed):
+    // x 72.6..101.5 down to the stair hall, x 72.6..97 below that, 9 m high ---
+    wallX(M.plaster, 72.6, 0, 47.5, HG, [18, [24.5, 3.0, 3.2], 34.3]);
+    wallZ(M.plaster, 35.8, 72.6, 97, HG, [[80, 2.6, 3], [91.2, 2.6, 3], [95.2, 1.6, 2.7]]);
+    wallX(M.plaster, 97, 25.6, 47.5, HG, [[33, 1.8, 2.7], [41.5, 1.6, 2.7]]);
+    wallZ(M.plaster, 25.6, 97, 108, HG, [[104.5, 1.8, 2.7]]);
+    wallX(M.plaster, 101.5, 0, 25.6, HG, [9.5, [12.5, 1.8], [23.7, 3.4, 3.4]]);
+    box(M.ceiling, 72.6, HG, 0, 101.5, HG + 0.1, 25.6);
+    box(M.ceiling, 72.6, HG, 25.6, 97, HG + 0.1, 35.8);
     for (let x = 76; x < 96; x += 6) box(M.skylight, x, HG - 0.02, 2, x + 2, HG, 34);
-    for (let x = 75; x < 96; x += 7) for (let z = 5; z < 36; z += 8) {
+    for (let x = 75; x < 100; x += 7) for (let z = 5; z < 36; z += 8) {
+      if (x > 96 && z > 25) continue;
       cyl(M.dark, x, 7.2, z, 0.45, 0.25, 0.4, 14);
       cyl(M.lamp, x, 7.18, z, 0.42, 0.42, 0.02, 14);
     }
-    sign(noCameraSign, 0.55, 0.8, 220, 320, 71.87, 1.6, 26.8, -PI / 2);   // video 0:20
-    sign(label('CONCEPT LAB'), 3.6, 0.7, 720, 140, 71.87, 5.3, 23.5, -PI / 2);
+    sign(noCameraSign, 0.55, 0.8, 220, 320, 72.47, 1.6, 26.6, -PI / 2);   // video 0:19-0:20
+    sign(label('CONCEPT LAB'), 3.6, 0.7, 720, 140, 72.47, 5.3, 24.5, -PI / 2);
+    for (const z of [22.95, 26.05]) box(M.yellowPaint, 72.45, 0, z - 0.05, 72.5, 0.6, z + 0.05);   // bumpers at the black door (video 0:20)
+    room(72.6, 0, 76.2, 5.5, { h: 3.6, m: M.plaster, skip: ['w'], doors: { s: [74.4] }, table: false });   // switchgear and tea rooms
     // roller door in the north wall
     box(M.slats, 79.5, 0, 0.1, 88.5, 6, 0.25);
     for (const x of [79.3, 88.5]) box(M.yellowPaint, x, 0, 0.1, x + 0.2, 6.2, 0.35, true);
-    // yellow lines marking the bays and the walkway
-    for (const z of [3.5, 15, 28]) box(M.yellow, 73, 0, z, 96, 0.012, z + 0.12);
-    for (const z of [20.6, 25.4]) box(M.yellow, 72.2, 0, z, 96.3, 0.012, z + 0.12);
-    for (let x = 80; x < 96; x += 8) box(M.yellow, x, 0, 3.5, x + 0.12, 0.012, 15);
+    // yellow lines marking the bays and the walkway from the corridor door to the stair hall
+    for (const z of [3.5, 15]) box(M.yellow, 76.5, 0, z, 101.2, 0.012, z + 0.12);
+    box(M.yellow, 73, 0, 28, 96.7, 0.012, 28.12);
+    for (const z of [22.4, 25.3]) box(M.yellow, 72.8, 0, z, 101.3, 0.012, z + 0.12);
+    for (let x = 80; x < 100; x += 8) box(M.yellow, x, 0, 3.5, x + 0.12, 0.012, 15);
 
     // An autonomous truck: white cab with sensors on the roof, dark chassis, three axles
     function truck(x, z, len, color, cab = true) {
@@ -851,9 +974,9 @@ GS.Runthrough = (function () {
       }
       collide(x, z, x + len, z + 2.5, cab ? 3.9 : 2.1);
     }
-    truck(76.5, 5.2, 6.8, M.truck);
-    truck(86.5, 10.6, 7, M.white);
-    truck(78.5, 29.5, 6.4, M.truck, false);   // cab-less hauler
+    truck(77.5, 6.2, 6.8, M.truck);
+    truck(88, 11.6, 7, M.white);
+    truck(79, 29.5, 6.4, M.truck, false);   // cab-less hauler
     // a car on a two-post lift
     for (const z of [28.4, 31.9]) box(M.blue, 89.2, 0, z, 89.6, 3.6, z + 0.4, true);
     box(M.grey, 88.6, 1.5, 28.9, 95, 1.6, 31.8);
@@ -878,55 +1001,57 @@ GS.Runthrough = (function () {
       }
       collide(x0, z0, x1, z1, 4.5);
     }
-    rack(73, 78.8, 0.2, 1.4);
-    rack(89.5, 96.2, 0.2, 1.4);
-    rack(95, 96.3, 26.5, 35.5);
+    rack(76.5, 79.0, 0.2, 1.4);
+    rack(89.2, 98.8, 0.2, 1.4);
+    rack(95.6, 96.8, 26.5, 35.5);
+    rack(100.2, 101.3, 1.8, 8.4);
     // workbench with a pegboard along the west wall
-    box(M.oak, 72.1, 0.9, 2.5, 73.1, 0.95, 13.5);
-    box(M.grey, 72.1, 0, 2.5, 73.1, 0.9, 13.5, true);
-    box(M.felt, 72.11, 1.2, 3, 72.2, 2.6, 13);
-    for (let z = 3.5; z < 12.8; z += 1.1) box(M.steel, 72.2, rr(1.4, 2.3), z, 72.3, rr(2.0, 2.5), z + 0.2);
-    for (const [x, z] of [[74, 33], [95.4, 16.5], [83.5, 17]]) { box(M.red, x - 0.5, 0, z - 0.35, x + 0.5, 1.1, z + 0.35, true); box(M.steel, x - 0.5, 1.1, z - 0.35, x + 0.5, 1.13, z + 0.35); }
-    for (const [x, z] of [[85, 8], [85.8, 8.6], [76, 15.8], [93, 26.8], [80, 26.8]]) { add(M.orange, new THREE.ConeGeometry(0.18, 0.7, 10).translate(x, 0.35, z)); box(M.orange, x - 0.22, 0, z - 0.22, x + 0.22, 0.03, z + 0.22); }
+    box(M.oak, 72.7, 0.9, 6.5, 73.7, 0.95, 15.5);
+    box(M.grey, 72.7, 0, 6.5, 73.7, 0.9, 15.5, true);
+    box(M.felt, 72.71, 1.2, 7, 72.8, 2.6, 15);
+    for (let z = 7.5; z < 14.8; z += 1.1) box(M.steel, 72.8, rr(1.4, 2.3), z, 72.9, rr(2.0, 2.5), z + 0.2);
+    for (const [x, z] of [[76.2, 28], [100.6, 16.5], [84, 17.5]]) { box(M.red, x - 0.5, 0, z - 0.35, x + 0.5, 1.1, z + 0.35, true); box(M.steel, x - 0.5, 1.1, z - 0.35, x + 0.5, 1.13, z + 0.35); }
+    for (const [x, z] of [[86, 7], [86.8, 7.6], [76, 16.2], [93, 26.8], [80, 26.8]]) { add(M.orange, new THREE.ConeGeometry(0.18, 0.7, 10).translate(x, 0.35, z)); box(M.orange, x - 0.22, 0, z - 0.22, x + 0.22, 0.03, z + 0.22); }
     // overhead crane
-    for (const z of [2, 34.5]) box(M.yellowPaint, 72.2, 7.6, z - 0.2, 96.3, 8.0, z + 0.2);
+    for (const z of [2, 34.5]) box(M.yellowPaint, 72.8, 7.6, z - 0.2, 96.8, 8.0, z + 0.2);
     box(M.yellowPaint, 84.6, 7.4, 2, 85.4, 7.9, 34.5);
     box(M.dark, 84.7, 6.6, 14, 85.3, 7.4, 14.8);
     cyl(M.steel, 85, 4.2, 14.4, 0.02, 0.02, 2.4, 4);
-    ductZ(0.3, 36.2, 8.2, 74.5, 0.5);
+    ductZ(0.3, 35.5, 8.2, 75, 0.5);
     // spawn spots in the garage (behind the trucks and racks)
-    spawnAt(74, 2, 78, 4.5); spawnAt(91, 2, 95.5, 4.5); spawnAt(87, 14, 93, 15.8); spawnAt(73.5, 31.5, 77, 35.5);
-    // lab rooms south of the garage
-    ceiling(72, 36.5, 96.5, 47.5, H1);
-    room(72, 36.5, 80.5, 47.5, { h: H1, walls: false, roof: false });
-    room(80.5, 36.5, 88.5, 47.5, { h: H1, walls: false, roof: false });
-    room(88.5, 36.5, 96.5, 47.5, { h: H1, walls: false, roof: false });
-    wallX(M.plaster, 80.5, 36.5, 47.5, H1);
-    wallX(M.plaster, 88.5, 36.5, 47.5, H1);
-    for (const x of [73, 81.5, 89.5]) { box(M.grey, x, 0, 45.5, x + 6, 0.9, 46.6, true); box(M.steel, x, 0.9, 45.5, x + 6, 0.93, 46.6); }
+    spawnAt(77, 2, 81, 4.5); spawnAt(91, 2, 98, 4.5); spawnAt(88, 15, 95, 17.5); spawnAt(73.5, 31.5, 77, 35.3);
 
-    // --- East strip: labs and the stair hall ("same feature" on both plans) ---
-    wallZ(M.plaster, 9, 96.5, 108, H1, [103]);
-    wallZ(M.plaster, 19, 96.5, 108, H1, [99.6]);
-    wallZ(M.plaster, 26, 96.5, 108, H1, [99.6]);
-    wallZ(M.plaster, 36.5, 96.5, 108, H1, [103]);
-    spawnAt(97.5, 1, 107, 8); spawnAt(97.5, 10, 107, 18); spawnAt(97.5, 27, 107, 35.5); spawnAt(97.5, 37.5, 107, 46.5);
-    for (const [z0, z1] of [[1, 8], [27, 35.5], [37.5, 46.5]]) { box(M.white, 103, 0, z0 + 1, 107.5, 0.9, z0 + 2.2, true); box(M.screen, 104, 0.9, z0 + 1.3, 105.2, 1.6, z0 + 1.35); }
-    for (let i = 0; i < 9; i++) box(M.oak, 102.5 + i * 0.6, 0, 19.1, 107.9, 0.36 * (i + 1), 20.9, true);
-    box(M.glass, 102.5, 0.4, 20.88, 107.9, 4.3, 20.95);
-    ductX(96.5, 108, 5.5, 23.5, 0.4);
+    // --- Labs round the Concept lab: workshops south of it, battery and power electronics labs
+    // east of it, 3D printers and HIL automation in the north-east corner ---
+    wallX(M.plaster, 76, 35.8, 47.5, H1);
+    wallX(M.plaster, 89, 35.8, 47.5, H1);
+    wallX(M.plaster, 93.5, 35.8, 47.5, H1);
+    wallZ(M.plaster, 35.8, 97, 108, H1, [102]);
+    wallZ(M.plaster, 10, 101.5, 108, H1);
+    wallZ(M.plaster, 19.6, 101.5, 108, HG);
+    wcBlock(72.7, 35.9, 75.9, 47.4, null);
+    for (const [x0, z0, x1, z1] of [[76, 35.8, 89, 47.5], [89, 35.8, 93.5, 47.5], [93.5, 35.8, 97, 47.5], [97, 25.6, 108, 35.8], [97, 35.8, 108, 47.5], [101.5, 0, 108, 10], [101.5, 10, 108, 19.6]]) {
+      room(x0, z0, x1, z1, { h: H1, walls: false, roof: false });
+    }
+    for (const [x0, x1] of [[77, 83], [89.5, 93], [93.9, 96.6]]) { box(M.grey, x0, 0, 45.5, x1, 0.9, 46.6, true); box(M.steel, x0, 0.9, 45.5, x1, 0.93, 46.6); }
+    for (const [z0, z1] of [[1, 8], [11, 18.5]]) { box(M.white, 104, 0, z0 + 1, 107.5, 0.9, z0 + 2.2, true); box(M.screen, 105, 0.9, z0 + 1.3, 106.2, 1.6, z0 + 1.35); }
+
+    // --- The stair hall ("same feature" on both plans): from the Concept lab through to the
+    // South building, past a stair going up ---
+    for (let i = 0; i < 9; i++) box(M.oak, 103.4 + i * 0.5, 0, 19.7, 107.9, 0.36 * (i + 1), 21.1, true);
+    box(M.glass, 103.4, 0.4, 21.08, 107.9, 4.3, 21.15);
+    ductX(101.5, 108, 5.5, 23.6, 0.4);
 
     // =========================================================================================
     // The South building: x 108..212, z 0..47.5, one high hall (7.5 m) with two-storey room pods
     const H2 = 7.5;
-    box(M.office, 108, -0.1, 0, 193.4, 0, 47.5);
-    box(M.office, 193.4, -0.1, 0, 201, 0, 15.7);
-    box(M.tile, 193.4, -0.1, 15.7, 201, 0, 20.9);
-    box(M.office, 193.4, -0.1, 20.9, 201, 0, 47.5);
-    box(M.tile, 201, -0.1, 0, 212, 0, 47.5);
-    box(M.carpet, 108.5, 0, 22.4, 118, 0.01, 24.6);
-    box(M.carpet, 118, 0, 22.0, 138.5, 0.01, 23.6);
-    box(M.carpet, 138.5, 0, 20.0, 193.4, 0.01, 21.6);
+    box(M.office, 108, -0.1, 0, 189, 0, 47.5);
+    box(M.office, 189, -0.1, 0, 212, 0, 15.6);
+    box(M.tile, 189, -0.1, 15.6, 212, 0, 23.2);        // the gates and reception
+    box(M.office, 189, -0.1, 23.2, 212, 0, 47.5);
+    box(M.carpet, 108.2, 0, 21.3, 116.2, 0.01, 23.3);
+    box(M.carpet, 116.2, 0, 21.3, 142.5, 0.01, 22.7);
+    box(M.carpet, 142.5, 0, 20.2, 189, 0.01, 22.6);
     wallZ(M.brick, 0, 108, 212, OUT);
     wallZ(M.brick, 47.5, 108, 212, OUT);
     wallX(M.brick, 212, 0, 15.7, OUT);
@@ -943,20 +1068,20 @@ GS.Runthrough = (function () {
     box(M.dark, 212, 2.95, 16.5, 214.2, 3.2, 22.5);
     sign(letters('COMPANY', '#f4f4f4'), 8.4, 1.1, 1400, 190, 212.13, 5.0, 19.5, PI / 2, true);
 
-    // west end: closed rooms, a passage from the stair hall, service rooms
-    wallZ(M.plaster, 21.5, 108, 122.9, 4.5, [110.6, 117.1]);
-    wallZ(M.plaster, 10, 108, 122.9, 4.5);
-    wallX(M.plaster, 122.9, 0, 21.5, H2);
-    box(M.plaster, 108, 4.5, 0, 122.9, 4.7, 21.5);
-    spawnAt(110, 11.5, 121.5, 20);
-    wallZ(M.plaster, 25.5, 108, 118.2, 4.5);
-    wallZ(M.plaster, 34, 108, 118.2, 4.5);
-    wallX(M.plaster, 118.2, 25.5, 47.5, 4.5, [29.1, 41.1]);
-    box(M.plaster, 108, 4.5, 25.5, 118.2, 4.7, 47.5);
-    spawnAt(109.5, 27, 117, 33); spawnAt(109.5, 35.5, 117, 46.5);
+    // west end: a passage from the stair hall between closed rooms (north) and service rooms (south)
+    wallZ(M.plaster, 20.8, 108, 120.8, 4.5, [110.6, 118.5]);
+    wallZ(M.plaster, 10, 108, 120.8, 4.5);
+    wallX(M.plaster, 120.8, 0, 20.8, H2);
+    box(M.plaster, 108, 4.5, 0, 120.8, 4.7, 20.8);
+    spawnAt(110, 11.5, 119.5, 19.5);
+    wallZ(M.plaster, 23.8, 108, 116.2, 4.5);
+    wallZ(M.plaster, 34, 108, 116.2, 4.5);
+    wallX(M.plaster, 116.2, 23.8, 47.5, 4.5, [29.1, 41.1]);
+    box(M.plaster, 108, 4.5, 23.8, 116.2, 4.7, 47.5);
+    spawnAt(109.5, 25.3, 115, 33); spawnAt(109.5, 35.5, 115, 46.5);
     // the lab with six vehicle bays (the rectangles on the plan)
-    wallZ(M.plaster, 21.5, 122.9, 137.3, H2, [[130.1, 3.0, 3.4]]);
-    wallX(M.plaster, 137.3, 0, 21.5, H2, [[17.1, 2.6, 3.2]]);
+    wallZ(M.plaster, 20.8, 120.8, 137.8, H2, [[130.1, 3.0, 3.4]]);
+    wallX(M.plaster, 137.8, 0, 20.8, H2, [[17.1, 2.6, 3.2]]);
     function car(x, z, color) {   // along z
       box(color, x - 0.85, 0.35, z, x + 0.85, 1.05, z + 4.4);
       box(M.navy, x - 0.75, 1.05, z + 1.2, x + 0.75, 1.55, z + 3.4);
@@ -964,14 +1089,16 @@ GS.Runthrough = (function () {
       cyl(M.dark, x, 1.55, z + 2.3, 0.12, 0.12, 0.18, 10);
       collide(x - 0.85, z, x + 0.85, z + 4.4, 1.55);
     }
-    for (const x of [125.8, 130.1, 134.4]) for (const z of [2, 11.5]) {
+    for (const x of [124.5, 129.5, 134.5]) for (const z of [1.8, 11.9]) {
       box(M.grey, x - 1.3, 0, z, x + 1.3, 0.12, z + 7.5);
       if (rnd() < 0.6) car(x, z + 1.5, [M.white, M.red, M.blue, M.dark][(rnd() * 4) | 0]);
     }
-    spawnAt(124, 9.6, 136, 11.3); spawnAt(124, 19.6, 136, 21);
+    spawnAt(122, 9.6, 136.5, 11.6); spawnAt(122, 19.5, 136.5, 20.4);
 
-    // Room pods: a ground floor of rooms (wood, blue glass for the video studios) under a
-    // white upper storey with a blue window band, and a spiral stair (views E, F, M)
+    // Room pods: a ground floor of rooms (beige panels, blue glass for the video studios) under a
+    // white upper storey with a blue window band, and a spiral stair (views E, F, M; video
+    // 0:24-0:33). Measured on the plan: three pods north of the passage, five south of it, each
+    // with a WC block between the passage and the pod.
     function upper(x0, z0, x1, z1, h = 3.5) {
       box(M.white, x0 - 0.1, h, z0 - 0.1, x1 + 0.1, 6.3, z1 + 0.1);
       box(M.blueGlass, x0 - 0.16, h + 0.9, z0 + 0.4, x1 + 0.16, 5.5, z1 - 0.4);
@@ -985,96 +1112,119 @@ GS.Runthrough = (function () {
       }
       collide(x - 0.5, z - 0.5, x + 0.5, z + 0.5, 3.6);
     }
-    const TOP = [[142, 147.5], [156.9, 162.4], [171.6, 177]];
+    const TOP = [[142.5, 147.7], [157.3, 162.5], [172.3, 177.5]];
     TOP.forEach(([x0, x1], i) => {
       const cx = (x0 + x1) / 2;
       room(x0, 0.1, x1, 6.6, { h: 3.5, doors: { [i % 2 ? 'e' : 'w']: [3.4] }, glass: [i % 2 ? 'w' : 'e', 1, 6], roofM: M.white });
       room(x0, 6.6, x1, 13.1, { h: 3.5, doors: { s: [cx] }, glass: [i % 2 ? 'e' : 'w', 7.2, 12.5], roofM: M.white });
       upper(x0, 0.1, x1, 13.1);
       spiral(x0 + 0.8, 14.0);
-      room(x0, 15.4, x1, 19, { h: 3.0, doors: { n: [cx] }, table: false });   // small rooms by the passage
+      // small glass-fronted rooms with screens by the passage (video 0:33-0:34)
+      room(x0, 15.8, x1, 19.5, { h: 3.0, doors: { n: [cx] }, glass: ['s', x0 + 0.5, x1 - 0.5], table: false });
+      box(M.screen, cx - 0.7, 1.0, 19.1, cx + 0.7, 1.8, 19.15);
     });
-    const MID = [[127.6, 133.1], [142, 147.5], [156.9, 162.4], [171.6, 176.9], [186.2, 191.3]];
-    // doors at both ends: a way round when the passage is blocked
-    MID.forEach(([x0, x1]) => room(x0, 24, x1, 28.5, { h: 3.2, doors: { n: [(x0 + x1) / 2], s: [(x0 + x1) / 2] }, table: false }));
-    for (let i = 0; i < 10; i++) box(M.oak, 147.8 + i * 0.48, 0, 22, 152.6, 0.35 * (i + 1), 24, true);   // stair up
-    box(M.glass, 147.8, 0.4, 21.95, 152.6, 4.4, 22.0);
-    const LOW = [[127.6, 132.7], [142, 147.5], [156.9, 161.9], [171.6, 176.9], [186.2, 191.3]];
-    LOW.forEach(([x0, x1], i) => {
-      room(x0, 32.3, x1, 37.3, { h: 3.5, doors: { n: [x0 + 1.6] }, roofM: M.white });
-      room(x0, 37.3, x1, 42.3, { h: 3.5, doors: { [i % 2 ? 'w' : 'e']: [39.8] }, glass: [i % 2 ? 'e' : 'w', 37.8, 41.8], roofM: M.white });
-      room(x0, 42.3, x1, 47.4, { h: 3.5, doors: { [i % 2 ? 'e' : 'w']: [44.8] }, glass: [i % 2 ? 'w' : 'e', 42.8, 46.8], roofM: M.white });
-      upper(x0, 32.3, x1, 47.4);
-      spiral(x1 - 0.8, 31.3);
+    // the last small room, west of the reception gates, opens to the team area
+    room(187.7, 15.8, 192.5, 19.5, { h: 3.0, doors: { w: [17.6] }, glass: ['s', 188.2, 192.0], table: false });
+    const PODS = [[127.5, 132.8], [142.5, 147.7], [157.3, 162.5], [172.3, 177.5], [187.7, 192.5]];
+    // WC blocks with doors at both ends: a way round when the passage is blocked
+    PODS.forEach(([x0, x1], i) => {
+      const n = i === PODS.length - 1 ? x0 + 1.1 : (x0 + x1) / 2;
+      room(x0, 23.2, x1, 28.9, { h: 3.2, doors: { n: [n], s: [(x0 + x1) / 2] }, table: false });
+    });
+    for (let i = 0; i < 10; i++) box(M.oak, 147.8 + i * 0.57, 0, 21.4, 153.5, 0.35 * (i + 1), 23.1, true);   // stair up
+    box(M.glass, 147.8, 0.4, 21.35, 153.5, 4.4, 21.4);
+    PODS.forEach(([x0, x1], i) => {
+      room(x0, 31.5, x1, 36.8, { h: 3.5, doors: { n: [x1 - 1.6] }, roofM: M.white });
+      room(x0, 36.8, x1, 42.1, { h: 3.5, doors: { [i % 2 ? 'w' : 'e']: [39.45] }, glass: [i % 2 ? 'e' : 'w', 37.3, 41.6], roofM: M.white });
+      room(x0, 42.1, x1, 47.4, { h: 3.5, doors: { [i % 2 ? 'e' : 'w']: [44.75] }, glass: [i % 2 ? 'w' : 'e', 42.6, 46.9], roofM: M.white });
+      upper(x0, 31.5, x1, 47.4);
+      spiral(x0 + 0.6, 30.6);   // on the west corner (video 0:27-0:28)
     });
     // open team areas between the pods
-    desks(137.3, 142, 0, 14.6, 'n');
-    [[147.5, 156.9], [162.4, 171.6], [177, 186.2]].forEach(([a, b]) => desks(a, b, 0, 14.6, 'n'));
-    [[118.2, 127.6], [132.7, 142], [147.5, 156.9], [161.9, 171.6], [176.9, 186.2]].forEach(([a, b]) => desks(a, b, 31.5, 47.5, 's'));
-    // white storage units along the passage (video 0:22-0:26)
-    for (const [a, b] of [[147.5, 156.9], [162.4, 171.6], [177, 186.2]]) box(M.white, (a + b) / 2 - 1.2, 0, 14.9, (a + b) / 2 + 1.2, 1.25, 15.3, true);
-    for (const [a, b] of [[118.2, 127.6], [132.7, 142], [147.5, 156.9], [161.9, 171.6], [176.9, 186.2]]) box(M.white, (a + b) / 2 - 1.2, 0, 30.4, (a + b) / 2 + 1.2, 1.25, 30.9, true);
-    for (let x = 135; x < 190; x += 11) plant(x, 29.6, 1.2);
-    // round pendant lamps over the passage (video 0:24), ducts, LED rings
+    desks(137.8, 142.5, 0, 14.6, 'n');
+    [[147.7, 157.3], [162.5, 172.3], [177.5, 187.7]].forEach(([a, b]) => desks(a, b, 0, 14.6, 'n'));
+    [[116.2, 127.5], [132.8, 142.5], [147.7, 157.3], [162.5, 172.3], [177.5, 187.7]].forEach(([a, b]) => desks(a, b, 31.5, 47.5, 's'));
+    // white storage units with planters along the passage (video 0:22-0:24, 0:34)
+    for (const [a, b] of [[147.7, 157.3], [162.5, 172.3], [177.5, 187.7]]) {
+      box(M.white, (a + b) / 2 - 1.2, 0, 14.9, (a + b) / 2 + 1.2, 1.25, 15.3, true);
+      for (let x = (a + b) / 2 - 1; x < (a + b) / 2 + 1.1; x += 0.5) ball(M.leaf, x, 1.4, 15.1, 0.22);
+    }
+    for (const [a, b] of [[116.2, 127.5], [132.8, 142.5], [147.7, 157.3], [162.5, 172.3], [177.5, 187.7]]) box(M.white, (a + b) / 2 - 1.2, 0, 30.4, (a + b) / 2 + 1.2, 1.25, 30.9, true);
+    for (const x of [137, 152.5, 167.4, 182.6]) plant(x, 29.9, 1.2);
+    // round pendant lamps over the passage (video 0:25), ducts, LED rings
     for (let x = 150; x < 166; x += 2.2) { ball(M.lamp, x, 3.8 + (x % 2) * 0.3, 20.5, 0.35); cyl(M.dark, x, 4.1, 20.5, 0.01, 0.01, H2 - 4.1, 3); }
     ductX(108.5, 211, 6.5, 21, 0.55);
-    ductX(118, 193, 6.6, 30, 0.35);
+    ductX(116.2, 193, 6.6, 30, 0.35);
     ductZ(0.5, 47, 6.7, 140, 0.35);
-    for (const [x, z] of [[152, 7], [167, 7], [181.5, 7], [123, 39.5], [137.5, 39.5], [152, 39.5], [166.5, 39.5], [181.5, 39.5], [123, 28.8]]) ring(x, z, 4.4, 1.6);
+    for (const [x, z] of [[152.5, 7], [167.4, 7], [182.6, 7], [121.9, 39.5], [137.7, 39.5], [152.5, 39.5], [167.4, 39.5], [182.6, 39.5], [122, 28.8]]) ring(x, z, 4.4, 1.6);
 
-    // The studio X210 (views C, F, G): cameras, high tables, a ring light and a big screen
-    wallX(M.plaster, 186.2, 0, 15.7, H2);
-    wallZ(M.plaster, 15.7, 186.2, 212, H2, [[191, 3.0, 3.2], 206.1]);
-    wallX(M.plaster, 201, 0, 15.7, H2, [3.9]);
-    wallZ(M.plaster, 7.8, 201, 212, 4);
-    box(M.plaster, 201, 4, 0, 212, 4.2, 15.7);
-    box(M.dark, 186.3, 0, 0.1, 201, 0.02, 15.6);
-    box(M.screen, 192, 1.5, 0.12, 197, 4.2, 0.2);
-    ring(193.5, 7.5, 4.6, 2.2); ring(193.5, 7.5, 4.9, 1.4);
-    for (const [x, z] of [[191.5, 8.5], [195.5, 7]]) { cyl(M.white, x, 1.08, z, 0.5, 0.5, 0.04, 16); cyl(M.grey, x, 0, z, 0.05, 0.05, 1.08, 6); collide(x - 0.4, z - 0.4, x + 0.4, z + 0.4, 1.12); }
-    for (const [x, z] of [[189, 12.5], [198, 12], [193.5, 13.5]]) {
+    // The studio X210 (views C, F, G): cameras, high tables, a ring light and a big screen. A way
+    // round the reception gates: in from the team area on the west, out into reception.
+    wallX(M.plaster, 187.7, 0, 15.6, H2, [12.5]);
+    wallZ(M.plaster, 15.6, 187.7, 212, H2, [[200.6, 2.4, 3.2], [203.7, 1.8]]);
+    wallX(M.plaster, 202.5, 0, 15.6, H2, [8.4]);
+    wallX(M.plaster, 207.6, 0, 15.6, 4, [3, 10.8]);
+    wallZ(M.plaster, 6, 202.5, 207.6, 4, [205]);
+    box(M.plaster, 202.5, 4, 0, 212, 4.2, 15.6);
+    box(M.dark, 187.8, 0, 0.1, 202.4, 0.02, 15.5);
+    box(M.screen, 192.6, 1.5, 0.12, 197.6, 4.2, 0.2);
+    ring(195.1, 7.5, 4.6, 2.2); ring(195.1, 7.5, 4.9, 1.4);
+    for (const [x, z] of [[193.1, 8.5], [197.1, 7]]) { cyl(M.white, x, 1.08, z, 0.5, 0.5, 0.04, 16); cyl(M.grey, x, 0, z, 0.05, 0.05, 1.08, 6); collide(x - 0.4, z - 0.4, x + 0.4, z + 0.4, 1.12); }
+    for (const [x, z] of [[190.6, 12.5], [199.6, 12], [195.1, 13.5]]) {
       for (let k = 0; k < 3; k++) add(M.dark, new THREE.CylinderGeometry(0.02, 0.02, 1.6, 4).translate(0, 0.8, 0).rotateZ(0.25).rotateY(k * 2.1).translate(x, 0, z));
       box(M.black, x - 0.2, 1.5, z - 0.35, x + 0.2, 1.85, z + 0.35);
       cyl(M.dark, x, 1.55, z - 0.5, 0.1, 0.12, 0.2, 10);
     }
-    spawnAt(188, 1.5, 199.5, 6); spawnAt(202.5, 1.5, 210.5, 6.5); spawnAt(202.5, 9, 210.5, 14.5);
-    // kitchen, the video rooms and the rooms behind reception
-    room(193.4, 20.9, 201, 34, { h: 3.6, m: M.plaster, doors: { w: [27.1] }, table: false });
-    box(M.white, 199.5, 0, 22, 200.8, 0.95, 33, true);
-    box(M.oak, 199.4, 0.95, 22, 200.8, 1.0, 33);
-    room(193.4, 34, 201, 40.7, { h: 3.6, skip: ['n'], doors: { w: [37.35] }, glass: ['w', 38.6, 40.3] });
-    room(193.4, 40.7, 201, 47.5, { h: 3.6, doors: { w: [44.1] }, glass: ['w', 41.1, 42.8] });
-    room(201, 30, 212, 47.5, { h: 4, m: M.plaster, skip: ['w'], doors: { n: [206.1] } });
-    // the gates into reception (video 0:34-0:36), with the Office X sign above (view I)
-    turnstiles(196.5, 15.8, 20.9, 18.4, false);
-    box(M.dark, 196.4, 3.0, 15.7, 196.6, 4.3, 20.9);
-    sign(officeSign, 3.9, 1.3, 600, 200, 196.38, 3.65, 18.3, -PI / 2);
-    // reception (video 0:38-0:40, view D)
-    box(M.white, 202.5, 0, 16.4, 205.8, 1.1, 17.5, true);
-    box(M.oak, 202.5, 0, 17.48, 205.8, 1.0, 17.52);
-    box(M.screen, 210, 1.6, 15.82, 211.6, 2.5, 15.86);
+    spawnAt(189.5, 1.5, 201, 6); spawnAt(203.5, 1, 207, 5.3); spawnAt(203.5, 7, 207, 14.8); spawnAt(208.2, 1, 211.4, 14.8);
+    box(M.white, 203, 0, 0.2, 207.4, 0.9, 1.0, true);   // the kitchenette
+    // the gates into reception (video 0:36-0:38), with the Office X sign above (view I)
+    turnstiles(191.5, 19.5, 23.2, 22.1, false);
+    box(M.dark, 191.4, 3.0, 19.5, 191.6, 4.3, 23.2);
+    sign(officeSign, 3.3, 1.1, 600, 200, 191.38, 3.65, 21.35, -PI / 2);
+    // reception (video 0:38-0:42, view D): a curved white desk on the left, chairs by the
+    // revolving door, a coffee counter on the right
+    for (let k = 0; k < 6; k++) {
+      const t = -0.55 + k * 0.22;
+      add(M.white, new THREE.BoxGeometry(0.85, 1.1, 0.5).rotateY(t).translate(197 + 3.9 * Math.sin(t), 0.55, 13.0 + 3.9 * Math.cos(t)));
+    }
+    collide(194.8, 16.0, 199.2, 17.2, 1.1);
+    box(M.white, 193.6, 0, 16.0, 194.4, 0.9, 16.5, true);   // the little cart
+    box(M.navy, 194.8, 2.2, 15.75, 195.8, 3.0, 15.8);         // logo plate
     sign(officeSign, 4.5, 1.5, 600, 200, 206.5, 4.6, 15.83, 0);
-    for (const x of [207.5, 209.6]) { box(M.white, x - 0.9, 0, 26.6, x + 0.9, 0.45, 27.5); box(M.white, x - 0.9, 0.45, 27.3, x + 0.9, 0.85, 27.5, true); }
-    cyl(M.dark, 202.3, 0, 28.6, 0.04, 0.04, 1.8, 6); ball(M.orange, 202.3, 1.5, 28.6, 0.22);   // coat stand
-    plant(210.8, 16.6, 1.3); plant(201.8, 23.4, 1.2);
-    box(M.dark, 210.6, 0, 23.8, 211.4, 1.2, 24.4, true);   // bins by the door
+    for (const x of [205.6, 207.2, 209.5]) { box(M.grey, x - 0.4, 0, 16.0, x + 0.4, 0.45, 16.8, true); box(M.grey, x - 0.4, 0.45, 15.95, x + 0.4, 0.85, 16.15); }
+    box(M.white, 206.0, 0, 17.3, 207.0, 0.4, 17.9, true);
+    plant(210.8, 16.5, 1.3); plant(203.0, 22.6, 1.1);
+    box(M.white, 208.0, 0, 22.5, 211.0, 0.95, 23.1, true);
+    box(M.black, 209.6, 0.95, 22.6, 210.3, 1.55, 23.0);       // coffee machine
+    box(M.navy, 193.8, 0, 23.0, 196.0, 4.0, 23.1);           // dark blue panel with a screen (video 0:39)
+    box(M.screen, 194.3, 1.6, 22.94, 195.5, 2.3, 23.0);
+    // the café kitchen, the video rooms and the rooms behind reception
+    room(193.8, 23.2, 202, 31, { h: 3.6, m: M.plaster, doors: { n: [199] }, table: false });
+    box(M.white, 200.5, 0, 24, 201.8, 0.95, 30, true);
+    box(M.oak, 200.4, 0.95, 24, 201.8, 1.0, 30);
+    room(193.8, 31, 202, 33.6, { h: 3.6, m: M.plaster, skip: ['n'], doors: { w: [32.3] }, table: false });
+    room(193.8, 33.6, 202, 40.5, { h: 3.6, skip: ['n'], doors: { w: [37] }, glass: ['w', 38.6, 40.1] });
+    room(193.8, 40.5, 202, 47.5, { h: 3.6, skip: ['n'], doors: { w: [44] }, glass: ['w', 41, 42.8] });
+    box(M.panel, 202, 0, 23.2, 204.5, 4, 30.5, true);        // the stairwell
+    room(204.5, 23.2, 212, 30.5, { h: 4, m: M.plaster, doors: { n: [207], s: [208] } });
+    room(202, 30.5, 212, 47.5, { h: 4, m: M.plaster, skip: ['n'] });
 
     // ---------- Things in the way, different every round ----------
-    // Each site is a line across a passage that has a way round it (through rooms, the other
-    // gates or the next gap between the pods). `types` lists what fits there: a row of sign
+    // Each site is a line across a passage that has a way round it (through the Innovation
+    // Garage, a lab, the studio, the WC blocks or the next gap between the pods). `types` lists what fits there: a row of sign
     // stands, or scissor lifts and mail carts with sign stands filling the rest of the line.
     // Every site/type pair is built once, hidden; randomize() picks a few for each round.
     const SITES = [
-      { name: 'café gate', line: 17, a0: 49.0, a1: 52.3, alongX: true, deck: 2.0, ceil: 3.4, types: ['signs', 'cart', 'lift'] },
-      { name: 'corridor by pod D', line: 59.2, a0: 19.1, a1: 28.9, deck: 3.6, ceil: H1, types: ['signs', 'lift+cart', 'cart+cart+cart', 'lift+lift'] },
-      { name: 'garage, way in', line: 72.75, a0: 21.05, a1: 25.95, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
-      { name: 'garage, way out', line: 96.0, a0: 19.8, a1: 25.7, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart+cart', 'lift+cart'] },
-      { name: 'after the stair hall', line: 114, a0: 21.6, a1: 25.4, deck: 3.6, ceil: H2, types: ['signs', 'lift', 'cart', 'cart+cart'] },
-      { name: 'south, by the lab', line: 132.3, a0: 21.6, a1: 23.9, types: ['signs', 'cart'] },
-      { name: 'south, pod 2', line: 146.6, a0: 19.1, a1: 23.9, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
-      { name: 'south, pod 3', line: 162.1, a0: 19.1, a1: 23.9, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
-      { name: 'south, pod 4', line: 176.1, a0: 19.1, a1: 23.9, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart', 'lift+cart'] },
-      { name: 'reception gate', line: 196.5, a0: 18.4, a1: 20.7, types: ['signs', 'cart'] },
+      { name: 'café gates', line: 16.9, a0: 47.35, a1: 50.55, alongX: true, deck: 2.4, ceil: H1, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'WC passage by the café', line: 58.8, a0: 23.45, a1: 25.55, types: ['signs', 'cart'] },
+      { name: 'Concept lab, way in', line: 73.3, a0: 23.05, a1: 25.95, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'Concept lab, way out', line: 100.85, a0: 22.05, a1: 25.35, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'after the stair hall', line: 113, a0: 20.95, a1: 23.65, deck: 3.6, ceil: H2, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'south, by the vehicle lab', line: 131.9, a0: 20.95, a1: 23.1, types: ['signs', 'cart'] },
+      { name: 'south, pod 2', line: 145.1, a0: 19.65, a1: 23.1, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'south, pod 3', line: 159.9, a0: 19.65, a1: 23.1, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'south, pod 4', line: 174.9, a0: 19.65, a1: 23.1, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart'] },
+      { name: 'reception gates', line: 189.9, a0: 19.65, a1: 23.1, deck: 4.6, ceil: H2, types: ['signs', 'lift', 'cart+cart'] },
     ];
     const PIECE = { lift: 2.56, cart: 1.32 };   // length along the line
     function barrier(site, type) {
@@ -1112,7 +1262,7 @@ GS.Runthrough = (function () {
     // ---------- Merge into meshes ----------
     for (const { m, geos } of parts.values()) {
       const mesh = new THREE.Mesh(GS.Geo.merge(geos), m);
-      if (m === M.glass || m === M.blueGlass) mesh.renderOrder = 1;
+      if (m === M.glass || m === M.blueGlass || m === M.curtain) mesh.renderOrder = 1;
       scene.add(mesh);
       shootables.push(mesh);
     }
