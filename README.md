@@ -11,6 +11,15 @@ Pick a map in the menu:
   You heal half a heart at a time after a while without getting hit.
   The menu has a **Monster speed** slider (40–160 %), and every monster gets its own
   random pace, so some are quicker than others.
+- **Runthrough** – run through Office X, a big office building: start outside the main
+  entrance and get out through the revolving door at the far end (about 200 m): café,
+  turnstiles, the corridor between the team areas, a garage, a stair hall and a hall of
+  two-storey room pods. Mail carts, rolling sign stands and scissor lifts block the obvious way
+  in places, so you have to go through rooms. Monsters come out of the rooms and from the team
+  areas at the sides – lots of them, mostly ahead of you, more Barteks than elsewhere, all small
+  enough for the doors – and get faster every 30 s. Getting out gives a bonus (more the faster
+  you are); the scoreboard shows your time, or how far you got.
+  The reference photos, floor plans and video are kept locally in `assets/` (ignored by git).
 
 Monster families (same number on the sketch = same family):
 1 blade stalkers Fob, Bob, Olt · 2 root things Frot, Trassel, Dhi (flies, poisonous) ·
@@ -62,7 +71,8 @@ Three buttons in the menu, saved between visits:
   green from inside, boulders with broken faces, weathered broken columns, stone blocks to
   shoot from, a soil and grass floor with a trodden path, pebbles, rubble and grass tufts
   swaying in the wind, and sun shadows (not on phones). It is built in the background in about
-  a second; the simple valley shows until then. The training range stays drawn.
+  a second; the simple valley shows until then. The training range stays drawn, and Runthrough has
+  one look.
 
 All start on the detailed graphics; switch down if a phone or older computer gets slow.
 
@@ -81,6 +91,7 @@ Touch: left thumb moves, right thumb aims, on-screen buttons for fire/reload/zoo
 |------|------|
 | `js/world.js` | Training range: layout, crates, targets |
 | `js/arena.js` | Monster valley map |
+| `js/runthrough.js` | Runthrough map: office layout, furniture, textures, route and monster spawn spots |
 | `js/terrain.js` | Detailed valley: rock/soil/grass textures, triplanar rock material, cliffs, boulders, columns, scatter |
 | `js/monsters.js` | Monster models (both detail levels), movement, path finding, difficulty |
 | `js/blood.js` | Blood drops, splats and pools, coloured per family |

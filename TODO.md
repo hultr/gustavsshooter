@@ -12,6 +12,12 @@
 - [ ] Look at the detailed monsters and guns in a real browser (only checked in headless
       screenshots so far): skin and wood colours, mouth size, reload pose.
 
+- [ ] Play Runthrough on a real computer and phone: frame rate (~170 merged meshes, ~500
+      colliders), whether the turnstiles and revolving doors feel OK to walk through, and if
+      the monsters come out of the rooms often enough. Only checked headless so far.
+- [ ] Runthrough: check the layout against the real office (the garage and the 1 m → 0.8 m
+      scale are guesses; reference material in `assets/office/`).
+
 ## Next features
 - [ ] Shared scoreboard is on Firebase: check that the first real score shows up on another
       computer.
@@ -22,6 +28,8 @@
       unreadable) and the prices 15M / 25M are guesses – check with Gustav.
 
 ## Tuning (after more playing)
+- [ ] Runthrough: exit bonus in `escaped()` in `js/game.js`; spawn distance (8–40 m) and the
+      "ahead" weighting in `spawnPlace()` in `js/monsters.js`; monsters more than 55 m away give up.
 - [ ] Difficulty: `speedMul`, `spawnEvery`, `maxAlive` in `js/monsters.js`,
       per-monster hp/speed/damage in the `SPECIES` table.
 - [ ] Per-monster pace range: `PACE_MIN`/`PACE_MAX` in `js/monsters.js`.
@@ -33,6 +41,9 @@
       gun materials in `materials()` in `js/guns-hd.js`, recoil/sway springs in `js/viewmodel.js`.
 
 ## Done
+- [x] Runthrough map (2026-10-09): from the reference in `assets/` (floor plans, photos, video); headless
+      checks: every spawn spot and the exit reachable on the path grid, a simulated 90 s walk
+      to the exit with 31 monsters spawning, none stuck in walls, flyers staying under 3.2 m.
 - [x] Detailed world (2026-10-04): lifelike rock, cliffs, cave, boulders, columns, ground,
       pebbles, grass and sun shadows in the monster valley; same colliders as before.
 - [x] New sketches (2026-10-04): Kikarrevolver and Candy sniper (keys 0 and -), monsters
