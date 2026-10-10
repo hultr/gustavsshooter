@@ -1,6 +1,6 @@
 # Shared scoreboard
 
-The game keeps a top 10 for each map (`range`, `monsters`). An entry is tiny:
+The game keeps a top 10 for each map (`range`, `monsters`, `runthrough`). An entry is tiny:
 `{ name, score, time, wave, date }`. Where it is stored is set in `js/scores-config.js`:
 
 ```js
@@ -34,8 +34,8 @@ far more than a scoreboard needs. Never sleeps. Needs a Google account.
      "rules": {
        "scores": {
          "$board": {
-           ".read": "$board === 'range' || $board === 'monsters'",
-           ".validate": "$board === 'range' || $board === 'monsters'",
+           ".read": "$board === 'range' || $board === 'monsters' || $board === 'runthrough'",
+           ".validate": "$board === 'range' || $board === 'monsters' || $board === 'runthrough'",
            ".indexOn": ["score"],
            "$id": {
              ".write": "!data.exists()",
@@ -63,7 +63,7 @@ by hand. A bit slower (about a second per request).
 1. Create a Google Sheet. *Extensions → Apps Script*, replace the code with:
 
    ```js
-   const BOARDS = ['range', 'monsters'];
+   const BOARDS = ['range', 'monsters', 'runthrough'];
    function sheet() {
      const ss = SpreadsheetApp.getActive();
      return ss.getSheetByName('scores') || ss.insertSheet('scores');
@@ -115,7 +115,7 @@ played every week.
    ```sql
    create table scores (
      id bigint generated always as identity primary key,
-     board text not null check (board in ('range', 'monsters')),
+     board text not null check (board in ('range', 'monsters', 'runthrough')),
      name text not null check (char_length(name) between 1 and 20),
      score integer not null check (score between 0 and 10000000),
      time integer not null default 0,

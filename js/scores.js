@@ -64,12 +64,15 @@ GS.Scores = (function () {
     },
   }[cfg.backend];
 
-  let online = !!(remote && cfg.url);
-  const status = () => (online ? 'online' : 'local');
+  // Each board falls back to the local one on its own, so a board the backend doesn't know
+  // yet (e.g. a new map not in the database rules) doesn't take the others offline
+  const offline = new Set();
+  const online = board => !!(remote && cfg.url) && !offline.has(board);
+  const status = board => (online(board) ? 'online' : 'local');
 
   async function list(board) {
-    if (online) {
-      try { return sortTop(await remote.list(board)); } catch (e) { console.warn('Scoreboard offline, using local scores:', e.message); online = false; }
+    if (online(board)) {
+      try { return sortTop(await remote.list(board)); } catch (e) { console.warn(`Scoreboard "${board}" offline, using local scores:`, e.message); offline.add(board); }
     }
     return sortTop(await local.list(board));
   }
@@ -84,10 +87,10 @@ GS.Scores = (function () {
   // Save a score; returns the new top list and the saved entry (to highlight it)
   async function submit(board, { name, score, time = 0, wave = 0 }) {
     const entry = { name: cleanName(name), score: Math.max(0, Math.round(score)), time: Math.round(time), wave, date: new Date().toISOString() };
-    if (online) {
-      try { await remote.add(board, entry); } catch (e) { console.warn('Could not save online, saving locally:', e.message); online = false; }
+    if (online(board)) {
+      try { await remote.add(board, entry); } catch (e) { console.warn(`Could not save "${board}" online, saving locally:`, e.message); offline.add(board); }
     }
-    if (!online) await local.add(board, entry);
+    if (!online(board)) await local.add(board, entry);
     return { top: await list(board), entry };
   }
 

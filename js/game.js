@@ -624,7 +624,7 @@
         if (k === 0 || k === 2) td.className = 'num';
       });
     });
-    $('boardNote').textContent = GS.Scores.status() === 'online' ? 'Shared scoreboard' : 'Scores on this computer';
+    $('boardNote').textContent = GS.Scores.status(board) === 'online' ? 'Shared scoreboard' : 'Scores on this computer';
     $('board').hidden = false;
   }
   $('boardBtn').addEventListener('click', () => { if ($('board').hidden) showBoard(); else $('board').hidden = true; });
