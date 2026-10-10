@@ -15,8 +15,9 @@
 - [ ] Play Runthrough on a real computer and phone: frame rate (~170 merged meshes, ~500
       colliders), whether the turnstiles and revolving doors feel OK to walk through, and if
       the monsters come out of the rooms often enough. Only checked headless so far.
-- [ ] Runthrough: check the layout against the real office (the garage and the 1 m → 0.8 m
-      scale are guesses; reference material in `assets/office/`).
+- [ ] Runthrough: the inside of the Concept lab (the garage) is still a guess – the video
+      cuts at its door. Layout otherwise measured on the plans and checked against the video
+      (2026-10-10); reference material in `assets/office/`.
 
 - [ ] Runthrough: play a few rounds from each entrance and see if the random obstacles make
       fair and fun routes; the ten places and what fits where are `SITES` in `js/runthrough.js`.
@@ -44,6 +45,11 @@
       gun materials in `materials()` in `js/guns-hd.js`, recoil/sway springs in `js/viewmodel.js`.
 
 ## Done
+- [x] Runthrough layout from the video and plans (2026-10-10): café, gates, corridor with WC
+      blocks at each pod column, lounge, Concept lab and labs round it, stair hall, South pods,
+      reception gates and desk moved to measured positions; the ten obstacle places moved with
+      them. Headless checks: every spawn reachable, every place/mix closes its passage and
+      leaves a way round, no obstacle inside a wall, 200 random rounds all with a way out.
 - [x] Runthrough random obstacles (2026-10-10): ten places, 3–6 blocked per round with a random
       fitting mix, random entrance; headless checks: every place/mix closes its passage, 200
       random rounds all leave a way out for you and the monsters.
