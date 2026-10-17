@@ -13,10 +13,12 @@ Pick a map in the menu:
   ×1.6 for every kill and the Runthrough exit bonus), and every monster gets its own
   random pace, so some are quicker than others.
 - **Runthrough** – run through Office X, a big office building, from one entrance to the
-  other (about 200 m): café, turnstiles, the corridor between the team areas and WC blocks, a
-  garage, a stair hall and a hall of two-storey room pods. Every round starts at one of the two entrances at
-  random, and mail carts, rolling sign stands and blue scissor lifts block 3–6 of ten places
-  (each with a mix that fits there), so you have to find the way round – through rooms, a
+  other (about 300 m): café, turnstiles, the corridor between the team areas and WC blocks, a
+  garage, a stair hall and a hall of two-storey room pods. The café's short ways east are always
+  closed and renovation walls split the corridor from the south team areas, so every round goes
+  all the way to the dead-end west end of the main building and back. Every round starts at one
+  of the two entrances at random, and mail carts, rolling sign stands and blue scissor lifts
+  block 2–4 of eight more places (each with a mix that fits there), so you have to find the way round – through rooms, a
   side lab, the studio or the next gap between the pods. Monsters come out of the rooms and from
   the team areas at the sides – lots of them, more Barteks than elsewhere (four kinds only live
   here), all small enough for the doors – and get faster every 30 s. The distance shown is what

@@ -3,10 +3,12 @@
 // taken; positions are measured on the plans). You start outside the main entrance
 // (HUVUDENTRÉ) and have to get out through the revolving door at the far end of the South
 // building. The way the video goes: revolving door → café, down the lane between the counter and
-// the seating steps → turnstiles → the corridor, squeezing between the WC blocks of the pod
-// column by the café → the Concept lab (the garage, where the video cuts, so its inside is
-// guessed) → the stair hall ("same feature" on the plan) → the passage through the South
-// building past its two-storey room pods → turnstiles → reception → revolving door.
+// the seating steps → turnstiles → the corridor → the Concept lab (the garage, where the video
+// cuts, so its inside is guessed) → the stair hall ("same feature" on the plan) → the passage
+// through the South building past its two-storey room pods → turnstiles → reception → revolving
+// door. In the game the café's short ways east are closed and renovation walls split the corridor
+// from the south team areas, so you go west to the dead end of the building first, round it and
+// back east to the Concept lab: the whole building is used every round.
 // Rolling sign stands, mail carts and scissor lifts block the obvious way in a few places, so
 // you have to cut through a room or round the side. Monsters come out of the rooms along the
 // way and from the open team areas at the sides.
@@ -240,6 +242,16 @@ GS.Runthrough = (function () {
     g.font = `bold ${h * 0.2}px Arial`; g.fillText('!', w / 2, h * 0.37);
     g.font = `bold ${h * 0.08}px Arial`; g.fillText('CEILING WORK', w / 2, h * 0.64); g.fillText('KEEP OUT', w / 2, h * 0.76);
     g.font = `${h * 0.055}px Arial`; g.fillText('use the other way', w / 2, h * 0.87);
+  }
+  // on the renovation walls between the corridor and the south team areas
+  function renovationSign(g, w, h) {
+    g.fillStyle = '#f2c417'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#111';
+    for (let x = -h; x < w; x += h * 0.3) { g.beginPath(); g.moveTo(x, h * 0.18); g.lineTo(x + h * 0.15, h * 0.18); g.lineTo(x + h * 0.33, 0); g.lineTo(x + h * 0.18, 0); g.fill(); }
+    g.fillStyle = '#fff'; g.fillRect(w * 0.05, h * 0.24, w * 0.9, h * 0.7);
+    g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `bold ${h * 0.15}px Arial`; g.fillText('RENOVATION', w / 2, h * 0.4);
+    g.font = `${h * 0.1}px Arial`; g.fillText('no way through here', w / 2, h * 0.6); g.fillText('go round the far end', w / 2, h * 0.76);
   }
   function incubatorSign(g, w, h) {
     g.fillStyle = '#ecebe6'; g.fillRect(0, 0, w, h);
@@ -867,6 +879,21 @@ GS.Runthrough = (function () {
     box(M.teal, 56.2, 0, 27.0, 58.4, 3.4, 27.03); box(M.teal, 56.2, 0, 25.6, 56.23, 3.4, 27.0); box(M.teal, 58.37, 0, 25.6, 58.4, 3.4, 27.0);
     box(M.dark, 56.3, 0, 26.4, 58.3, 0.92, 27.0, true);                                         // coffee counter
     for (const x of [56.5, 57.4]) box(M.black, x, 0.92, 26.55, x + 0.5, 1.6, 26.95);
+    // Renovation walls between the corridor and the south team areas, from WC block to WC block,
+    // so the only way between them is round the far west end (x 0..10.7): with the café's ways
+    // east closed (see SITES), you have to go all the way west and back.
+    function renovationWall(x0, x1, z) {
+      for (let x = x0, i = 0; x < x1 - 0.05; x += 1.2, i++) {
+        const b = Math.min(x + 1.18, x1);
+        box(M.white, x, 0.06, z - 0.05, b, 2.6, z + 0.05);
+        box(M.dark, x, 2.6, z - 0.06, b, 2.66, z + 0.06);
+        box(M.steel, x - 0.03, 0, z - 0.3, x + 0.03, 0.06, z + 0.3);   // the feet
+        if (i % 3 === 1 && b - x > 1) for (const s of [-1, 1]) sign(renovationSign, 0.9, 0.6, 360, 240, (x + b) / 2, 1.6, z + s * 0.06, s > 0 ? 0 : PI);
+      }
+      collide(x0, z - 0.1, x1, z + 0.1, 2.66);
+    }
+    renovationWall(15.8, 30.8, 28.85);
+    renovationWall(35.8, 56, 28.85);
     // open team areas between the columns
     desks(0, 10.7, 0, 20.3, 'n');
     desks(15.8, 30.8, 0, 20.3, 'n');
@@ -1214,9 +1241,12 @@ GS.Runthrough = (function () {
     // Garage, a lab, the studio, the WC blocks or the next gap between the pods). `types` lists what fits there: a row of sign
     // stands, or scissor lifts and mail carts with sign stands filling the rest of the line.
     // Every site/type pair is built once, hidden; randomize() picks a few for each round.
+    // `always` sites are closed every round (with a random type): they shut the café's short ways
+    // east, the Innovation Garage and the WC passage, so from the café you have to go west to the
+    // far end and back along the south team areas (the renovation walls keep you there).
     const SITES = [
-      { name: 'café gates', line: 16.9, a0: 47.35, a1: 50.55, alongX: true, deck: 2.4, ceil: H1, types: ['signs', 'lift', 'cart+cart'] },
-      { name: 'WC passage by the café', line: 58.8, a0: 23.45, a1: 25.55, types: ['signs', 'cart'] },
+      { name: 'garage door from the café', line: 57.3, a0: 9.15, a1: 11.45, always: true, types: ['signs', 'cart'] },
+      { name: 'WC passage by the café', line: 58.8, a0: 23.45, a1: 25.55, always: true, types: ['signs', 'cart'] },
       { name: 'Concept lab, way in', line: 73.3, a0: 23.05, a1: 25.95, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart'] },
       { name: 'Concept lab, way out', line: 100.85, a0: 22.05, a1: 25.35, deck: 5.4, ceil: HG, types: ['signs', 'lift', 'cart+cart'] },
       { name: 'after the stair hall', line: 113, a0: 20.95, a1: 23.65, deck: 3.6, ceil: H2, types: ['signs', 'lift', 'cart+cart'] },
@@ -1332,18 +1362,24 @@ GS.Runthrough = (function () {
     };
     let end = ENDS.main;
     const staticCols = colliders.length, staticShoot = shootables.length;
-    // A new round: pick the entrance, then 3-6 sites to block with a random type each, and
-    // check there is still a way out (otherwise try again)
+    // Every way through has to pass the far west end of the main building (between the wall and
+    // the first pod column, south of the corridor), so the whole map is used every round
+    const MUST_PASS = (x, z) => x < 10.7 && z > 23.4 && z < 32.6;
+    const pickType = s => s.variants[Math.floor(Math.random() * s.variants.length)];
+    // A new round: pick the entrance, close the `always` sites and 2-4 more with a random type
+    // each, and check there is still a way out and that it goes by the far west end (otherwise
+    // try again)
     function randomize() {
       end = Math.random() < 0.5 ? ENDS.main : ENDS.south;
       Object.assign(api.start, end.start);
+      const always = SITES.filter(s => s.always), others = SITES.filter(s => !s.always);
       let picks = [];
       for (let tries = 0; tries < 30 && !picks.length; tries++) {
-        const order = SITES.map(s => [Math.random(), s]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
-        const p = order.slice(0, 3 + Math.floor(Math.random() * 4)).map(s => [s, s.variants[Math.floor(Math.random() * s.variants.length)]]);
+        const order = others.map(s => [Math.random(), s]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
+        const p = always.concat(order.slice(0, 2 + Math.floor(Math.random() * 3))).map(s => [s, pickType(s)]);
         if (tryPicks(p)) picks = p;
       }
-      if (!picks.length) tryPicks(picks);   // (never happens: every site has a way round)
+      if (!picks.length) { picks = always.map(s => [s, pickType(s)]); tryPicks(picks); }   // (never happens: every site has a way round)
       for (const s of SITES) for (const v of s.variants) v.group.visible = false;
       for (const [, v] of picks) v.group.visible = true;
       colliders.length = staticCols; shootables.length = staticShoot;
@@ -1354,6 +1390,15 @@ GS.Runthrough = (function () {
     function tryPicks(picks) {
       solid.set(baseSolid);
       for (const [, v] of picks) blockOut(v.cols, solid);
+      // with the far west end walled off, there must be no way out
+      const open = [];
+      for (let c = 0; c < GW * GH; c++) {
+        if (!solid[c] && MUST_PASS(bounds.minX + (c % GW + 0.5) * CELL, bounds.minZ + ((c / GW | 0) + 0.5) * CELL)) { solid[c] = 1; open.push(c); }
+      }
+      flood(end.goal);
+      const shortcut = toGo(end.start.x, end.start.z) < INF;
+      for (const c of open) solid[c] = 0;
+      if (shortcut) return false;
       flood(end.goal);
       api.length = toGo(end.start.x, end.start.z);
       return api.length < INF;

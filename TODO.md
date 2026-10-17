@@ -20,7 +20,7 @@
       (2026-10-10); reference material in `assets/office/`.
 
 - [ ] Runthrough: play a few rounds from each entrance and see if the random obstacles make
-      fair and fun routes; the ten places and what fits where are `SITES` in `js/runthrough.js`.
+      fair and fun routes; the places and what fits where are `SITES` in `js/runthrough.js`.
 
 ## Next features
 - [ ] Shared scoreboard is on Firebase: check that the first real score shows up on another
@@ -45,6 +45,11 @@
       gun materials in `materials()` in `js/guns-hd.js`, recoil/sway springs in `js/viewmodel.js`.
 
 ## Done
+- [x] Runthrough uses the whole map every round (2026-10-17): the café's door to the Innovation
+      Garage and the WC passage east of the gates are always closed, and renovation walls run
+      between the corridor and the south team areas, so the way goes by the far west end of the
+      main building. `randomize()` rejects any round where the west end can be skipped. Headless:
+      200 random rounds, all with a way out, 290–310 m from either entrance (was ~200 m).
 - [x] Runthrough layout from the video and plans (2026-10-10): café, gates, corridor with WC
       blocks at each pod column, lounge, Concept lab and labs round it, stair hall, South pods,
       reception gates and desk moved to measured positions; the ten obstacle places moved with
